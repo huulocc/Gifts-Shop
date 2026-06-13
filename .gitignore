@@ -30,3 +30,11 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+
+# Local project notes
+docs/CONTEXT.md
+docs/WBS.md
+
+# Backend generated/reference files
+backend/HELP.md
+backend/target/
