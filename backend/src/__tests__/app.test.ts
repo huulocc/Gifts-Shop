@@ -25,10 +25,32 @@ describe('GiftShop backend scaffold', () => {
   });
 
   it('returns a standard 501 envelope for wired but unimplemented public routes', async () => {
-    const response = await request(app).post('/api/auth/register').send({}).expect(501);
+    const response = await request(app).get('/api/products').expect(501);
 
     expect(response.body.error.code).toBe('NOT_IMPLEMENTED');
     expect(response.body.error.fields).toEqual({});
+  });
+
+  it('validates the register payload before reaching business logic', async () => {
+    const response = await request(app).post('/api/auth/register').send({}).expect(422);
+
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(response.body.error.fields).toHaveProperty('email');
+  });
+
+  it('validates the login payload before reaching business logic', async () => {
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'not-an-email' })
+      .expect(422);
+
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects /me without a session token', async () => {
+    const response = await request(app).get('/api/auth/me').expect(401);
+
+    expect(response.body.error.code).toBe('UNAUTHENTICATED');
   });
 
   it('rejects unauthenticated manager revenue access', async () => {

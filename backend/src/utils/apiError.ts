@@ -33,3 +33,7 @@ export function forbidden(message = 'You do not have permission to access this r
 export function notFound(path: string): ApiError {
   return new ApiError(404, 'NOT_FOUND', `No route matches ${path}.`);
 }
+
+export function conflict(message: string): ApiError {
+  return new ApiError(409, 'CONFLICT', message);
+}
