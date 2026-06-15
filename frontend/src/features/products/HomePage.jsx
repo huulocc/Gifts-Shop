@@ -32,73 +32,68 @@ export function HomePage() {
     loadHome();
   }, []);
 
+  const featuredProducts = products.slice(0, 4);
+
   return (
     <>
-      <section className="hero">
+      <section className="hero storefront-hero">
         <div className="container hero-grid entry">
           <div className="hero-copy">
             <p className="eyebrow">GiftShop</p>
-            <h1>Choose a gift that feels considered.</h1>
+            <h1>Thoughtful gifts for every small moment.</h1>
             <p className="lead">
-              Browse active products, keep cart choices clear, and record simple payments for the academic flow.
+              Browse keepsakes, journals, candles, and accessories ready for your next occasion.
             </p>
             <div className="cluster">
               <Button to="/products">Browse products</Button>
-              <Button variant="secondary" to="/login">
-                Log in
-              </Button>
             </div>
           </div>
-          <figure className="hero-card" aria-label="Wrapped gift product display">
-            <img
-              src="https://picsum.photos/seed/giftshop-curated-gifts/1200/1400"
-              alt="Curated gift products arranged on a calm surface"
-            />
-            <figcaption className="hero-card-note">
-              <strong>Customer and Manager only.</strong>
-              <p className="muted">No guest shopping, vouchers, shipping providers, or gateway redirects in v1.</p>
-            </figcaption>
-          </figure>
+          <div className="hero-showcase" aria-label="GiftShop product display">
+            <figure className="hero-flatlay">
+              <img
+                src="/images/giftshop-hero-flatlay.svg"
+                alt="Wrapped gifts, a candle, a journal, ribbon, and a bracelet arranged on a soft rose surface"
+              />
+            </figure>
+          </div>
         </div>
       </section>
 
       <section className="section">
         <div className="container stack-lg">
-          <header className="page-header">
-            <p className="eyebrow">Featured gifts</p>
-            <h2 className="page-title">Active products ready to browse</h2>
+          <header className="storefront-section-header">
+            <h2 className="page-title">Curated gifts to start with</h2>
+            <p className="lead">Image-first cards keep category, price, stock, and cart action easy to scan.</p>
           </header>
           {error ? (
             <ErrorState message={error} onRetry={loadHome} />
           ) : loading ? (
             <ProductGridSkeleton count={4} />
           ) : (
-            <ProductGrid products={products.slice(0, 4)} loading={false} />
+            <ProductGrid products={featuredProducts} loading={false} />
           )}
         </div>
       </section>
 
-      <section className="section-tight">
+      <section className="section-tight home-curation-band">
         <div className="container">
-          <div className="surface surface-padded">
-            <div className="between">
-              <div className="stack">
-                <h2>Browse by active category</h2>
-                <p className="muted">Customer pages show only active categories and products.</p>
-              </div>
-              <div className="cluster">
-                {loading
-                  ? null
-                  : categories.map((category) => (
-                      <Button
-                        key={category.id}
-                        variant="secondary"
-                        to={`/products?categoryId=${category.id}`}
-                      >
-                        {category.name}
-                      </Button>
-                    ))}
-              </div>
+          <div className="category-ribbon-panel category-ribbon-panel-wide">
+            <div className="stack">
+              <h2>Shop by category</h2>
+              <p className="muted">Start with accessories, keepsakes, stationery, or cozy gift sets.</p>
+            </div>
+            <div className="category-ribbons">
+              {loading
+                ? null
+                : categories.map((category) => (
+                    <Button
+                      key={category.id}
+                      variant="secondary"
+                      to={`/products?categoryId=${category.id}`}
+                    >
+                      {category.name}
+                    </Button>
+                  ))}
             </div>
           </div>
         </div>

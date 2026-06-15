@@ -87,7 +87,7 @@ export function CustomerLayout() {
       </main>
       <footer className="footer">
         <div className="container between">
-          <p>GiftShop keeps v1 focused on customers and managers.</p>
+          <p>Curated gifts for birthdays, keepsakes, and everyday thank-yous.</p>
           <Link className="btn btn-tertiary" to="/products">
             Browse products
           </Link>

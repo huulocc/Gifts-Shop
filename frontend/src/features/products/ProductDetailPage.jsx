@@ -103,8 +103,8 @@ export function ProductDetailPage() {
   const canAdd = product.quantity > 0 && product.isActive;
 
   return (
-    <section className="container section stack-lg entry">
-      <nav className="cluster muted" aria-label="Breadcrumb">
+    <section className="container section stack-lg entry product-detail-page">
+      <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link className="btn btn-tertiary" to="/">
           Home
         </Link>
@@ -117,25 +117,49 @@ export function ProductDetailPage() {
       </nav>
 
       <div className="detail-grid">
-        <figure className="detail-image">
-          <img
-            src={product.imageUrl || productFallbackImage}
-            alt={`${product.name} product photo`}
-          />
-        </figure>
-        <article className="surface surface-padded stack-lg">
+        <div className="detail-media-column">
+          <figure className="detail-image">
+            <img
+              src={product.imageUrl || productFallbackImage}
+              alt={`${product.name} product photo`}
+            />
+          </figure>
+          <aside className="detail-trust-panel" aria-label="Gift-ready details">
+            <h2>Good for gifting</h2>
+            <div className="gift-ready-list">
+              <span>Ready for birthdays</span>
+              <span>Pairs with a gift message</span>
+              <span>Easy to review in cart</span>
+            </div>
+          </aside>
+        </div>
+
+        <article className="surface surface-padded stack-lg detail-purchase-panel">
           <div className="stack">
             <p className="eyebrow">{product.category?.name || "Gift"}</p>
             <h1 className="page-title">{product.name}</h1>
-            <p className="lead">{product.description}</p>
+            <p className="detail-description">{product.description}</p>
           </div>
-          <div className="between">
-            <span className="price" style={{ fontSize: 26 }}>
+
+          <div className="detail-price-row">
+            <span className="price detail-price">
               {formatCurrency(product.unitPrice)}
             </span>
             <StatusBadge type="stock" value={stockState} />
           </div>
-          <div className="stack">
+
+          <div className="detail-meta-grid">
+            <div>
+              <span>Category</span>
+              <strong>{product.category?.name || "Gift"}</strong>
+            </div>
+            <div>
+              <span>Stock</span>
+              <strong>{product.quantity} available</strong>
+            </div>
+          </div>
+
+          <div className="detail-quantity-panel">
             <label className="radio-group-label" htmlFor="product-quantity">
               Quantity
             </label>
@@ -152,20 +176,23 @@ export function ProductDetailPage() {
               label="Product quantity"
             />
             {quantityError ? <span className="field-error" role="alert">{quantityError}</span> : null}
-            <p className="muted">{product.quantity} available in stock.</p>
+            <p className="muted">Choose from the available stock before adding this gift to cart.</p>
           </div>
-          <Button onClick={handleAdd} loading={adding} disabled={!canAdd}>
+          <Button onClick={handleAdd} loading={adding} loadingLabel="Adding to cart" disabled={!canAdd} full>
             {canAdd ? "Add to cart" : "Out of stock"}
           </Button>
         </article>
       </div>
 
-      <section className="stack-lg" aria-labelledby="related-title">
-        <h2 id="related-title">More from this category</h2>
+      <section className="stack-lg related-products-section" aria-labelledby="related-title">
+        <header className="storefront-section-header">
+          <h2 id="related-title">More from this category</h2>
+          <p className="lead">Keep browsing active gifts with the same category direction.</p>
+        </header>
         <ProductGrid
           products={related}
           loading={false}
-          emptyTitle="No related active products"
+          emptyTitle="No related gifts yet"
           emptyDescription="Try browsing the full catalog for more gifts."
         />
       </section>

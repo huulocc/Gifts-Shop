@@ -7,16 +7,16 @@ export function ProductGrid({ products, loading, emptyTitle, emptyDescription, o
   if (!products.length) {
     return (
       <EmptyState
-        title={emptyTitle || "No active products are available yet"}
-        description={emptyDescription || "Manager-created active products will appear here."}
-        actionLabel={onClear ? "Clear search" : undefined}
+        title={emptyTitle || "No gifts are available yet"}
+        description={emptyDescription || "New gift picks will appear here soon."}
+        actionLabel={onClear ? "Clear filters" : undefined}
         onAction={onClear}
       />
     );
   }
 
   return (
-    <div className="product-grid">
+    <div className="product-grid" aria-live="polite">
       {products.map((product) => (
         <ProductCard product={product} key={product.id} />
       ))}
