@@ -17,6 +17,7 @@ export function ProductCard({ product }) {
   const location = useLocation();
   const stockState = getStockState(product.quantity);
   const canAdd = product.isActive && product.quantity > 0;
+  const productPath = `/products/${product.id}`;
 
   async function handleAdd() {
     if (!user) {
@@ -46,32 +47,38 @@ export function ProductCard({ product }) {
   }
 
   return (
-    <article className="product-card">
-      <Link className="product-card-image" to={`/products/${product.id}`}>
-        <img
-          src={product.imageUrl || productFallbackImage}
-          alt={`${product.name} product photo`}
-          loading="lazy"
-        />
-      </Link>
-      <div className="product-card-body">
-        <div className="between">
-          <p className="muted">{product.category?.name || "Gift"}</p>
+    <article className={`product-card ${canAdd ? "" : "product-card-muted"}`}>
+      <div className="product-card-media">
+        <Link className="product-card-image" to={productPath} aria-label={`View ${product.name}`}>
+          <img
+            src={product.imageUrl || productFallbackImage}
+            alt={`${product.name} product photo`}
+            loading="lazy"
+          />
+        </Link>
+        <div className="product-card-stock">
           <StatusBadge type="stock" value={stockState} />
         </div>
+      </div>
+      <div className="product-card-body">
+        <p className="product-card-category">{product.category?.name || "Gift"}</p>
         <h2 className="product-card-title">
-          <Link to={`/products/${product.id}`}>{product.name}</Link>
+          <Link to={productPath}>{product.name}</Link>
         </h2>
-        <p className="muted">{product.description}</p>
-        <div className="between">
+        <p className="product-card-description">{product.description}</p>
+        <div className="product-card-footer">
           <span className="price">{formatCurrency(product.unitPrice)}</span>
+          <Link className="product-card-link" to={productPath}>
+            View details
+          </Link>
           <Button
             size="small"
             onClick={handleAdd}
             disabled={!canAdd || adding}
             loading={adding}
+            loadingLabel="Adding"
           >
-            {canAdd ? "Add" : "Unavailable"}
+            {canAdd ? "Add to cart" : "Out of stock"}
           </Button>
         </div>
       </div>
