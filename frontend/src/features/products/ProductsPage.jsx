@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { PageHeader } from "../../components/common/PageHeader.jsx";
 import { ErrorState } from "../../components/common/StateViews.jsx";
 import { ProductFilterBar } from "../../components/product/ProductFilterBar.jsx";
 import { ProductGrid } from "../../components/product/ProductGrid.jsx";
@@ -51,30 +50,38 @@ export function ProductsPage() {
   }
 
   return (
-    <section className="container section stack-lg entry">
-      <PageHeader
-        eyebrow="Catalog"
-        title="Find the right gift"
-        description="Search active products by name, description, or category. Inactive products stay in manager tools only."
-      />
-      <ProductFilterBar
-        search={search}
-        categoryId={categoryId}
-        categories={categories}
-        onSearch={(value) => updateParams({ search: value })}
-        onCategoryChange={(value) => updateParams({ categoryId: value })}
-      />
-      {error ? (
-        <ErrorState message={error} onRetry={loadProducts} />
-      ) : (
-        <ProductGrid
-          products={products}
-          loading={loading}
-          emptyTitle="No gifts match this search"
-          emptyDescription="Clear the filters or try a broader product keyword."
-          onClear={search || categoryId ? clearFilters : undefined}
-        />
-      )}
+    <section className="catalog-page section entry">
+      <div className="container stack-lg">
+        <div className="catalog-hero">
+          <div className="catalog-hero-copy">
+            <p className="eyebrow">Catalog</p>
+            <h1 className="page-title">Find the right gift</h1>
+            <p className="lead">
+              Search by name, category, or the gift you have in mind.
+            </p>
+          </div>
+          <ProductFilterBar
+            search={search}
+            categoryId={categoryId}
+            categories={categories}
+            resultCount={loading ? undefined : products.length}
+            onSearch={(value) => updateParams({ search: value })}
+            onCategoryChange={(value) => updateParams({ categoryId: value })}
+            onClear={search || categoryId ? clearFilters : undefined}
+          />
+        </div>
+        {error ? (
+          <ErrorState message={error} onRetry={loadProducts} />
+        ) : (
+          <ProductGrid
+            products={products}
+            loading={loading}
+            emptyTitle="No gifts match this search"
+            emptyDescription="Clear the filters or try a broader product keyword."
+            onClear={search || categoryId ? clearFilters : undefined}
+          />
+        )}
+      </div>
     </section>
   );
 }
