@@ -1,6 +1,6 @@
 import { CustomerFacade } from '../facades/customerFacade';
 import { ManagerFacade } from '../facades/managerFacade';
-import { OrderFacade } from '../facades/orderFacade';
+import type { OrderFacade, PlaceOrderRequest } from '../facades/orderFacade';
 import { assertCustomer, assertManager } from '../middleware/auth';
 import type { AuthenticatedRequest } from '../types/api';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -14,8 +14,12 @@ export class OrderController {
     private readonly orderFacade: OrderFacade,
   ) {}
 
-  createOrder = asyncHandler(async (_req, res) => {
-    sendData(res, await this.orderFacade.placeOrderFromCart(), 201);
+  createOrder = asyncHandler(async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    assertCustomer(authReq);
+    const request = req.body as PlaceOrderRequest;
+    const order = await this.orderFacade.placeOrder(authReq.user!.id, request);
+    sendData(res, order, 201);
   });
 
   listOrders = asyncHandler(async (req, res) => {
