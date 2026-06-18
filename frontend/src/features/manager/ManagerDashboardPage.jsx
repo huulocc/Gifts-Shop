@@ -23,7 +23,7 @@ export function ManagerDashboardPage() {
       const [nextSummary, nextOrders, nextProducts] = await Promise.all([
         reportService.getRevenueSummary(),
         orderService.listAllOrders(),
-        productService.listProducts({ includeInactive: true }),
+        productService.listManagerProducts(),
       ]);
       setSummary(nextSummary);
       setOrders(nextOrders.slice(0, 5));

@@ -1,6 +1,19 @@
-import { buildQuery, request, useMockApi } from "./apiClient.js";
+import { API_BASE_URL, buildQuery, request, useMockApi } from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeUser } from "./normalizers.js";
+
+async function syncBackendLogin(payload) {
+  if (!API_BASE_URL) return;
+  await request("/api/auth/login", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+async function syncBackendLogout() {
+  if (!API_BASE_URL) return;
+  await request("/api/auth/logout", { method: "POST" });
+}
 
 export const authService = {
   async register(payload) {
@@ -14,7 +27,16 @@ export const authService = {
   },
 
   async login(payload) {
-    if (useMockApi) return mockApi.login(payload);
+    if (useMockApi) {
+      const user = await mockApi.login(payload);
+      try {
+        await syncBackendLogin(payload);
+      } catch (error) {
+        if (user.role === "manager") throw error;
+      }
+      return user;
+    }
+
     const data = await request("/api/auth/login", {
       method: "POST",
       body: payload,
@@ -23,7 +45,16 @@ export const authService = {
   },
 
   async logout() {
-    if (useMockApi) return mockApi.logout();
+    if (useMockApi) {
+      const result = await mockApi.logout();
+      try {
+        await syncBackendLogout();
+      } catch {
+        // Mock logout should still clear the local demo session.
+      }
+      return result;
+    }
+
     return request("/api/auth/logout", { method: "POST" });
   },
 

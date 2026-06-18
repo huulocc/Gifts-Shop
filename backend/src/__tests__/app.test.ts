@@ -24,11 +24,10 @@ describe('GiftShop backend scaffold', () => {
     expect(response.body.error.fields).toEqual({});
   });
 
-  it('returns a standard 501 envelope for wired but unimplemented public routes', async () => {
-    const response = await request(app).get('/api/products').expect(501);
+  it('rejects unauthenticated manager product access', async () => {
+    const response = await request(app).get('/api/manager/products').expect(401);
 
-    expect(response.body.error.code).toBe('NOT_IMPLEMENTED');
-    expect(response.body.error.fields).toEqual({});
+    expect(response.body.error.code).toBe('UNAUTHENTICATED');
   });
 
   it('validates the register payload before reaching business logic', async () => {

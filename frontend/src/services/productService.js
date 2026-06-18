@@ -9,15 +9,19 @@ export const productService = {
     return (products || []).map((product) => normalizeProduct(product));
   },
 
+  async listManagerProducts(params = {}) {
+    const products = await request(`/api/manager/products${buildQuery(params)}`);
+    return (products || []).map((product) => normalizeProduct(product));
+  },
+
   async getProduct(id, options = {}) {
     if (useMockApi) return mockApi.getProduct(id, options);
     return normalizeProduct(await request(`/api/products/${id}${buildQuery(options)}`));
   },
 
   async createProduct(payload) {
-    if (useMockApi) return mockApi.createProduct(payload);
     return normalizeProduct(
-      await request("/api/products", {
+      await request("/api/manager/products", {
         method: "POST",
         body: payload,
       })
@@ -25,9 +29,8 @@ export const productService = {
   },
 
   async updateProduct(id, payload) {
-    if (useMockApi) return mockApi.updateProduct(id, payload);
     return normalizeProduct(
-      await request(`/api/products/${id}`, {
+      await request(`/api/manager/products/${id}`, {
         method: "PUT",
         body: payload,
       })
@@ -35,9 +38,8 @@ export const productService = {
   },
 
   async updateStock(id, quantity) {
-    if (useMockApi) return mockApi.updateStock(id, quantity);
     return normalizeProduct(
-      await request(`/api/products/${id}/stock`, {
+      await request(`/api/manager/products/${id}/stock`, {
         method: "PATCH",
         body: { quantity },
       })
@@ -45,9 +47,8 @@ export const productService = {
   },
 
   async softDisableProduct(id) {
-    if (useMockApi) return mockApi.softDisableProduct(id);
     return normalizeProduct(
-      await request(`/api/products/${id}`, {
+      await request(`/api/manager/products/${id}`, {
         method: "DELETE",
       })
     );
