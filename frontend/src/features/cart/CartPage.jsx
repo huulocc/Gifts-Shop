@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../../components/common/Button.jsx";
+import { ConfirmDialog } from "../../components/common/ConfirmDialog.jsx";
 import { OrderSummary } from "../../components/common/OrderSummary.jsx";
 import { PageHeader } from "../../components/common/PageHeader.jsx";
 import { QuantityStepper } from "../../components/common/QuantityStepper.jsx";
@@ -11,11 +12,13 @@ import { formatCurrency, getStockState } from "../../utils/format.js";
 import { validateQuantity } from "../../utils/validation.js";
 
 export function CartPage() {
-  const { cart, loading, refreshCart, updateItem, removeItem } = useCart();
+  const { cart, loading, refreshCart, updateItem, removeItem, clearCart } = useCart();
   const { addToast } = useToast();
   const [itemErrors, setItemErrors] = useState({});
   const [pageError, setPageError] = useState("");
   const [busyItemId, setBusyItemId] = useState("");
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     refreshCart().catch((error) => setPageError(error.message || "Could not load cart."));
@@ -44,6 +47,19 @@ export function CartPage() {
       addToast({ type: "error", title: "Could not remove item.", message: error.message });
     } finally {
       setBusyItemId("");
+    }
+  }
+
+  async function handleClearCart() {
+    setClearing(true);
+    try {
+      await clearCart();
+      setClearDialogOpen(false);
+      addToast({ title: "Cart cleared." });
+    } catch (error) {
+      addToast({ type: "error", title: "Could not clear cart.", message: error.message });
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -78,8 +94,14 @@ export function CartPage() {
           actionTo="/products"
         />
       ) : (
-        <div className="cart-layout">
-          <div className="line-list">
+        <>
+          <div className="cluster" style={{ justifyContent: "flex-end" }}>
+            <Button variant="danger" size="small" onClick={() => setClearDialogOpen(true)}>
+              Clear cart
+            </Button>
+          </div>
+          <div className="cart-layout">
+            <div className="line-list">
             {cart.items.map((item) => {
               const stockState = getStockState(item.product.quantity);
               return (
@@ -128,17 +150,28 @@ export function CartPage() {
                 </article>
               );
             })}
+            </div>
+            <OrderSummary
+              itemCount={itemCount}
+              subtotal={cart.subtotal}
+              total={cart.total}
+              actionLabel="Continue to checkout"
+              actionTo="/checkout"
+              disabled={!cart.items.length}
+              note="Checkout will recheck stock before creating the order."
+            />
           </div>
-          <OrderSummary
-            itemCount={itemCount}
-            subtotal={cart.subtotal}
-            total={cart.total}
-            actionLabel="Continue to checkout"
-            actionTo="/checkout"
-            disabled={!cart.items.length}
-            note="Checkout will recheck stock before creating the order."
+          <ConfirmDialog
+            open={clearDialogOpen}
+            title="Clear your cart?"
+            description="All items will be removed and their quantities returned to stock."
+            confirmLabel="Clear cart"
+            danger
+            loading={clearing}
+            onConfirm={handleClearCart}
+            onClose={() => setClearDialogOpen(false)}
           />
-        </div>
+        </>
       )}
     </section>
   );
