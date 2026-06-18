@@ -8,7 +8,7 @@ import { ProductController } from './controllers/productController';
 import { ReportController } from './controllers/reportController';
 import { CustomerFacade } from './facades/customerFacade';
 import { ManagerFacade } from './facades/managerFacade';
-import { OrderFacade } from './facades/orderFacade';
+import { DefaultOrderFacade, type OrderFacade } from './facades/orderFacade';
 import { PrismaCartRepository } from './repositories/cartRepository';
 import { PrismaCategoryRepository } from './repositories/categoryRepository';
 import { PrismaOrderRepository } from './repositories/orderRepository';
@@ -36,7 +36,7 @@ const paymentService = new PaymentService(paymentRepository);
 
 const customerFacade = new CustomerFacade();
 const managerFacade = new ManagerFacade(orderRepository);
-const orderFacade = new OrderFacade();
+const orderFacade: OrderFacade = new DefaultOrderFacade();
 
 export const controllers = {
   auth: new AuthController(authService),
