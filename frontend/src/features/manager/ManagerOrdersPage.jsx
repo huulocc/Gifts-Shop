@@ -11,7 +11,7 @@ import { useToast } from "../../contexts/ToastContext.jsx";
 import { orderService } from "../../services/orderService.js";
 import { orderStatuses } from "../../utils/constants.js";
 import { formatCurrency, formatDate, formatStatus } from "../../utils/format.js";
-import { validateOrderStatus } from "../../utils/validation.js";
+import { validateOrderStatusTransition } from "../../utils/validation.js";
 
 export function ManagerOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -49,7 +49,7 @@ export function ManagerOrdersPage() {
   }, [status, query]);
 
   async function applyStatus(order, nextStatus) {
-    const message = validateOrderStatus(nextStatus);
+    const message = validateOrderStatusTransition(order.orderStatus, nextStatus);
     setRowErrors((current) => ({ ...current, [order.id]: message }));
     if (message) return;
     setBusyOrderId(order.id);

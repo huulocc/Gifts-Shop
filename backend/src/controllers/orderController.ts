@@ -40,7 +40,7 @@ export class OrderController {
     const authReq = req as AuthenticatedRequest;
     if (req.query.scope === 'manager') {
       assertManager(authReq);
-      sendData(res, await this.managerFacade.listAllOrders({ query: req.params.id }));
+      sendData(res, await this.managerFacade.getOrder(req.params.id));
       return;
     }
 

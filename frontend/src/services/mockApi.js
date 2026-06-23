@@ -130,6 +130,24 @@ function calculateOrderTotal(items) {
   );
 }
 
+const allowedOrderStatusTransitions = {
+  pending: ["placed", "paid", "cancelled"],
+  placed: ["paid", "cancelled"],
+  paid: ["completed", "cancelled"],
+  cancelled: [],
+  completed: [],
+};
+
+function validateOrderStatusTransition(order, nextStatus) {
+  if (order.orderStatus === nextStatus) return;
+  if ((allowedOrderStatusTransitions[order.orderStatus] || []).includes(nextStatus)) return;
+  error(`Cannot change order status from ${order.orderStatus} to ${nextStatus}.`, {
+    status: 409,
+    code: "CONFLICT",
+    fields: { orderStatus: "Choose a valid next status for this order." },
+  });
+}
+
 export const mockApi = {
   async getCurrentUser() {
     await delay();
@@ -522,6 +540,7 @@ export const mockApi = {
     requireUser(state, "manager");
     const order = state.orders.find((item) => item.id === id);
     if (!order) error("Order not found.", { status: 404, code: "NOT_FOUND" });
+    validateOrderStatusTransition(order, orderStatus);
     order.orderStatus = orderStatus;
     order.updatedAt = new Date().toISOString();
     saveState(state);

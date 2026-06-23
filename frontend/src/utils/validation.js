@@ -119,3 +119,19 @@ export function validateOrderStatus(value) {
   if (!orderStatuses.includes(value)) return "Choose a valid order status.";
   return "";
 }
+
+const allowedOrderStatusTransitions = {
+  pending: ["placed", "paid", "cancelled"],
+  placed: ["paid", "cancelled"],
+  paid: ["completed", "cancelled"],
+  cancelled: [],
+  completed: [],
+};
+
+export function validateOrderStatusTransition(currentStatus, nextStatus) {
+  const statusMessage = validateOrderStatus(nextStatus);
+  if (statusMessage) return statusMessage;
+  if (currentStatus === nextStatus) return "";
+  if ((allowedOrderStatusTransitions[currentStatus] || []).includes(nextStatus)) return "";
+  return `Cannot change order status from ${currentStatus} to ${nextStatus}.`;
+}
