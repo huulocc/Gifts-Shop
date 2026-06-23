@@ -7,7 +7,6 @@ import { StatusBadge } from "../../components/common/StatusBadge.jsx";
 import { DetailSkeleton, ErrorState } from "../../components/common/StateViews.jsx";
 import { useToast } from "../../contexts/ToastContext.jsx";
 import { orderService } from "../../services/orderService.js";
-import { paymentService } from "../../services/paymentService.js";
 import { formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
 
 export function PaymentPage() {
@@ -35,17 +34,12 @@ export function PaymentPage() {
     loadOrder();
   }, [orderId]);
 
-  async function recordPayment() {
+  async function placeOrder() {
     if (!order) return;
     setRecording(true);
     setError("");
     try {
-      await paymentService.recordPayment({
-        orderId: order.id,
-        paymentMethod: order.paymentMethod,
-        amount: order.totalAmount,
-      });
-      const nextOrder = await orderService.getMyOrder(order.id);
+      const nextOrder = await orderService.placeOrder(order.id);
       setOrder(nextOrder);
       setSuccess("Payment recorded.");
       addToast({ title: "Payment recorded." });
@@ -72,7 +66,8 @@ export function PaymentPage() {
     );
   }
 
-  const eligible = ["pending", "placed"].includes(order.orderStatus);
+  const canRecordPayment = order.orderStatus === "pending";
+  const paymentRecorded = ["placed", "paid", "completed"].includes(order.orderStatus);
 
   return (
     <section className="container section stack-lg entry">
@@ -112,9 +107,15 @@ export function PaymentPage() {
             ) : null}
           </div>
           <div className="cluster">
-            <Button onClick={recordPayment} loading={recording} disabled={!eligible}>
-              {eligible ? "Record payment" : "Payment not available"}
-            </Button>
+            {canRecordPayment ? (
+              <Button onClick={placeOrder} loading={recording}>
+                Record payment
+              </Button>
+            ) : paymentRecorded ? (
+              <span className="alert alert-success">Payment has already been recorded.</span>
+            ) : (
+              <span className="alert alert-error">Payment is unavailable for this order.</span>
+            )}
             <Link className="btn btn-secondary" to={`/orders/${order.id}`}>
               View order
             </Link>
@@ -125,7 +126,7 @@ export function PaymentPage() {
           subtotal={order.totalAmount}
           total={order.totalAmount}
           paymentMethod={order.paymentMethod}
-          note="After successful recording, the mock order status becomes paid."
+          note="After successful recording, the order status becomes placed."
         />
       </div>
     </section>

@@ -71,6 +71,29 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   });
 }
 
+export function verifyAddToCartToken(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): void {
+  authenticateOptional(req, res, (error?: unknown) => {
+    if (error || !req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Please login to add product to cart',
+      });
+      return;
+    }
+
+    if (req.user.role !== 'customer') {
+      next(forbidden('The customer role is required.'));
+      return;
+    }
+
+    next();
+  });
+}
+
 export function requireRole(role: ApiRole) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     requireAuth(req, res, (error?: unknown) => {

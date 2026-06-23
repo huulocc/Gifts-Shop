@@ -54,10 +54,10 @@ export function CartProvider({ children }) {
 
   const addItem = useCallback(
     async (payload) => {
-      const nextCart = await cartService.addItem(payload);
-      setCart(nextCart);
+      const result = await cartService.addItem(payload);
+      setCart(result);
       addToast({ title: "Item added to cart." });
-      return nextCart;
+      return result;
     },
     [addToast]
   );

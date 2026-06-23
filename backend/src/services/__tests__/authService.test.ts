@@ -7,9 +7,6 @@ import type { CreateUserInput, UserRepository } from '../../repositories/userRep
 import { isApiError } from '../../utils/apiError';
 import { env } from '../../config/env';
 
-/**
- * In-memory UserRepository so the service is tested in isolation from Prisma/Neon.
- */
 class InMemoryUserRepository implements UserRepository {
   private readonly users = new Map<string, User>();
   private sequence = 0;
@@ -51,7 +48,6 @@ class InMemoryUserRepository implements UserRepository {
     return { ...updated };
   }
 
-  // Test helper: seed a manager (or any role) directly with a known password.
   async seed(overrides: Partial<CreateUserInput> & { password: string }): Promise<User> {
     return this.create({
       fullName: overrides.fullName ?? 'Seeded User',
@@ -91,7 +87,6 @@ describe('AuthService', () => {
       });
       expect(result.user.id).toBeTruthy();
 
-      // Password must be stored hashed, never as plain text.
       const stored = await repo.findByEmail('ada@example.com');
       expect(stored?.passwordHash).toBeDefined();
       expect(stored?.passwordHash).not.toBe(validRegister.password);
@@ -99,7 +94,6 @@ describe('AuthService', () => {
         true,
       );
 
-      // Token must verify and carry the user identity/claims.
       const payload = jwt.verify(result.token, env.jwtSecret) as jwt.JwtPayload;
       expect(payload.sub).toBe(result.user.id);
       expect(payload.email).toBe('ada@example.com');
@@ -177,7 +171,6 @@ describe('AuthService', () => {
       const registered = await service.register(validRegister);
       const me = await service.getCurrentUser(registered.user.id);
       expect(me).toMatchObject({ id: registered.user.id, email: 'ada@example.com' });
-      // DTO must not leak the password hash.
       expect(me).not.toHaveProperty('passwordHash');
     });
 

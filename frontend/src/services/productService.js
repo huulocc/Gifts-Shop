@@ -1,10 +1,17 @@
-import { buildQuery, request, useMockApi } from "./apiClient.js";
+import { buildQuery, request, useMockApi, useRealCartApi } from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeProduct } from "./normalizers.js";
 
+const backendSeedProductIds = new Set(["seed-bracelet", "seed-music-box"]);
+
 export const productService = {
   async listProducts(params = {}) {
-    if (useMockApi) return mockApi.listProducts(params);
+    if (useMockApi) {
+      const products = await mockApi.listProducts(params);
+      return useRealCartApi
+        ? products.filter((product) => backendSeedProductIds.has(product.id))
+        : products;
+    }
     const products = await request(`/api/products${buildQuery(params)}`);
     return (products || []).map((product) => normalizeProduct(product));
   },

@@ -1,10 +1,10 @@
-import { buildQuery, request, useMockApi } from "./apiClient.js";
+import { buildQuery, request, useMockApi, useRealCartApi } from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeOrder } from "./normalizers.js";
 
 export const orderService = {
   async createOrder(payload) {
-    if (useMockApi) return mockApi.createOrder(payload);
+    if (useMockApi && !useRealCartApi) return mockApi.createOrder(payload);
     return normalizeOrder(
       await request("/api/orders", {
         method: "POST",
@@ -14,14 +14,23 @@ export const orderService = {
   },
 
   async listMyOrders(params = {}) {
-    if (useMockApi) return mockApi.listOrders(params);
+    if (useMockApi && !useRealCartApi) return mockApi.listOrders(params);
     const orders = await request(`/api/orders${buildQuery(params)}`);
     return (orders || []).map((order) => normalizeOrder(order));
   },
 
   async getMyOrder(id) {
-    if (useMockApi) return mockApi.getOrder(id);
+    if (useMockApi && !useRealCartApi) return mockApi.getOrder(id);
     return normalizeOrder(await request(`/api/orders/${id}`));
+  },
+
+  async placeOrder(id) {
+    if (useMockApi && !useRealCartApi) return normalizeOrder(await mockApi.placeOrder(id));
+    return normalizeOrder(
+      await request(`/api/orders/${id}/place`, {
+        method: "POST",
+      })
+    );
   },
 
   async listAllOrders(params = {}) {

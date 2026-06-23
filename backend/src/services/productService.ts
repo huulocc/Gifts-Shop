@@ -63,7 +63,6 @@ function normalizeOptionalUrl(value: unknown): string | null {
       return imageUrl;
     }
   } catch {
-    // Converted to a field error below.
   }
 
   throw badRequest('Image URL must be a valid http or https URL.', {

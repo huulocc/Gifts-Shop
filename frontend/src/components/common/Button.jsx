@@ -5,6 +5,7 @@ export function Button({
   variant = "primary",
   size = "normal",
   loading = false,
+  loadingLabel = "Working",
   full = false,
   className = "",
   to,
@@ -38,7 +39,7 @@ export function Button({
       aria-busy={loading ? "true" : "false"}
       {...props}
     >
-      {loading ? "Working" : children}
+      {loading ? loadingLabel : children}
     </button>
   );
 }

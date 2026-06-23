@@ -1,4 +1,4 @@
-import type { Category, PrismaClient, Product } from '@prisma/client';
+import type { Prisma, PrismaClient, Product } from '@prisma/client';
 
 export interface ProductListFilters {
   includeInactive?: boolean;
@@ -17,12 +17,14 @@ export interface ProductWriteData {
   quantity: number;
 }
 
-export type ProductWithCategory = Product & {
-  category: Pick<Category, 'id' | 'name' | 'isActive'>;
-};
+export type ProductWithCategory = Prisma.ProductGetPayload<{
+  include: { category: true };
+}>;
 
 export interface ProductRepository {
   readonly db: PrismaClient;
+  findProductById(productId: string): Promise<Product | null>;
+  findProductsByIds(productIds: string[]): Promise<ProductWithCategory[]>;
   findAll(filters?: ProductListFilters): Promise<ProductWithCategory[]>;
   findById(id: string, options?: { includeInactive?: boolean }): Promise<ProductWithCategory | null>;
   findByName(name: string): Promise<Product | null>;
@@ -36,6 +38,19 @@ export interface ProductRepository {
 
 export class PrismaProductRepository implements ProductRepository {
   constructor(public readonly db: PrismaClient) {}
+
+  async findProductById(productId: string): Promise<Product | null> {
+    return this.db.product.findFirst({
+      where: { id: productId, isActive: true },
+    });
+  }
+
+  async findProductsByIds(productIds: string[]): Promise<ProductWithCategory[]> {
+    return this.db.product.findMany({
+      where: { id: { in: productIds } },
+      include: { category: true },
+    });
+  }
 
   findAll(filters: ProductListFilters = {}): Promise<ProductWithCategory[]> {
     const search = filters.search?.trim();
@@ -55,15 +70,7 @@ export class PrismaProductRepository implements ProductRepository {
             }
           : {}),
       },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
       orderBy: [{ updatedAt: 'desc' }, { name: 'asc' }],
     });
   }
@@ -77,15 +84,7 @@ export class PrismaProductRepository implements ProductRepository {
         id,
         ...(options.includeInactive ? {} : { isActive: true, category: { isActive: true } }),
       },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
     });
   }
 
@@ -107,15 +106,7 @@ export class PrismaProductRepository implements ProductRepository {
   create(data: ProductWriteData): Promise<ProductWithCategory> {
     return this.db.product.create({
       data,
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
     });
   }
 
@@ -123,15 +114,7 @@ export class PrismaProductRepository implements ProductRepository {
     return this.db.product.update({
       where: { id },
       data,
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
     });
   }
 
@@ -139,15 +122,7 @@ export class PrismaProductRepository implements ProductRepository {
     return this.db.product.update({
       where: { id },
       data: { quantity },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
     });
   }
 
@@ -155,15 +130,7 @@ export class PrismaProductRepository implements ProductRepository {
     return this.db.product.update({
       where: { id },
       data: { isActive: false },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-      },
+      include: { category: true },
     });
   }
 

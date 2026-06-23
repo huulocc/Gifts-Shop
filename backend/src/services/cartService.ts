@@ -1,27 +1,149 @@
 import type { CartRepository } from '../repositories/cartRepository';
-import { notImplemented } from '../utils/apiError';
+import type { ProductRepository } from '../repositories/productRepository';
+import { ApiError } from '../utils/apiError';
+import { moneyToString, multiplyMoney } from '../utils/money';
+
+export interface AddToCartResult {
+  productId: string;
+  quantity: number;
+  totalItems: number;
+}
+
+export interface CartDto {
+  id: string;
+  items: Array<{
+    id: string;
+    quantity: number;
+    lineTotal: string;
+    product: {
+      id: string;
+      categoryId: string;
+      category: { id: string; name: string; description: string | null; isActive: boolean };
+      name: string;
+      description: string | null;
+      unitPrice: string;
+      imageUrl: string | null;
+      isActive: boolean;
+      quantity: number;
+    };
+  }>;
+  subtotal: string;
+  total: string;
+  totalItems: number;
+}
 
 export class CartService {
-  constructor(private readonly cartRepository: CartRepository) {}
+  constructor(
+    private readonly cartRepository: CartRepository,
+    private readonly productRepository: ProductRepository,
+  ) {}
 
-  async getCart(): Promise<never> {
-    void this.cartRepository;
-    throw notImplemented('Cart lookup');
+  async addToCart(
+    customerId: string,
+    productId: string,
+    quantity: number,
+  ): Promise<AddToCartResult> {
+    const product = await this.productRepository.findProductById(productId);
+    if (!product) {
+      throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Product not found');
+    }
+
+    const cartItems = await this.cartRepository.findCartItemsByCustomer(customerId);
+    const existingQuantity = cartItems.find((item) => item.productId === productId)?.quantity ?? 0;
+    if (product.quantity < existingQuantity + quantity) {
+      throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
+    }
+
+    await this.cartRepository.addItem(customerId, productId, quantity);
+
+    const totalItems = await this.cartRepository.countCartItems(customerId);
+    return { productId, quantity, totalItems };
   }
 
-  async addItem(): Promise<never> {
-    throw notImplemented('Cart item creation');
+  async getCart(customerId: string): Promise<CartDto> {
+    const cartItems = await this.cartRepository.findCartItemsByCustomer(customerId);
+    if (cartItems.length === 0) {
+      return { id: '', items: [], subtotal: '0.00', total: '0.00', totalItems: 0 };
+    }
+
+    const products = await this.productRepository.findProductsByIds(
+      cartItems.map((item) => item.productId),
+    );
+    const productById = new Map(products.map((product) => [product.id, product]));
+    const items = cartItems.flatMap((item) => {
+      const product = productById.get(item.productId);
+      if (!product) return [];
+      return [{
+        id: item.id,
+        quantity: item.quantity,
+        lineTotal: multiplyMoney(product.unitPrice, item.quantity),
+        product: {
+          id: product.id,
+          categoryId: product.categoryId,
+          category: {
+            id: product.category.id,
+            name: product.category.name,
+            description: product.category.description,
+            isActive: product.category.isActive,
+          },
+          name: product.name,
+          description: product.description,
+          unitPrice: moneyToString(product.unitPrice),
+          imageUrl: product.imageUrl,
+          isActive: product.isActive,
+          quantity: product.quantity,
+        },
+      }];
+    });
+    const subtotal = items
+      .reduce((sum, item) => sum + Number(item.lineTotal), 0)
+      .toFixed(2);
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    return { id: cartItems[0].cartId, items, subtotal, total: subtotal, totalItems };
   }
 
-  async updateItem(): Promise<never> {
-    throw notImplemented('Cart item update');
+  async updateItem(customerId: string, cartItemId: string, quantity: number): Promise<CartDto> {
+    const item = await this.cartRepository.findCartItemByCustomer(customerId, cartItemId);
+    if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Cart item not found');
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      throw new ApiError(400, 'INVALID_QUANTITY', 'Quantity must be greater than zero');
+    }
+
+    const product = await this.productRepository.findProductById(item.productId);
+    if (!product || product.quantity < quantity) {
+      throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
+    }
+    const updated = await this.cartRepository.updateItemQuantity(
+      customerId,
+      cartItemId,
+      quantity,
+    );
+    if (!updated) {
+      throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
+    }
+    return this.getCart(customerId);
   }
 
-  async removeItem(): Promise<never> {
-    throw notImplemented('Cart item removal');
+  async adjustItem(customerId: string, cartItemId: string, difference: 1 | -1): Promise<CartDto> {
+    const item = await this.cartRepository.findCartItemByCustomer(customerId, cartItemId);
+    if (!item) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Cart item not found');
+    return this.updateItem(customerId, cartItemId, item.quantity + difference);
   }
 
-  async clearCart(): Promise<never> {
-    throw notImplemented('Cart clearing');
+  async removeItem(customerId: string, cartItemId: string): Promise<CartDto> {
+    const deleted = await this.cartRepository.deleteCartItem(customerId, cartItemId);
+    if (!deleted) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Cart item not found');
+    return this.getCart(customerId);
+  }
+
+  async clearCart(customerId: string): Promise<CartDto> {
+    await this.cartRepository.clearCart(customerId);
+    return this.getCart(customerId);
+  }
+
+  async getCartSummary(customerId: string): Promise<CartDto> {
+    const cart = await this.getCart(customerId);
+    if (cart.items.length === 0) throw new ApiError(400, 'EMPTY_CART', 'Your cart is empty');
+    return cart;
   }
 }

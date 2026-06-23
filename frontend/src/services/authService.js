@@ -1,4 +1,4 @@
-import { API_BASE_URL, buildQuery, request, useMockApi } from "./apiClient.js";
+import { API_BASE_URL, buildQuery, request, useMockApi, useRealCartApi } from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeUser } from "./normalizers.js";
 
@@ -17,22 +17,23 @@ async function syncBackendLogout() {
 
 export const authService = {
   async register(payload) {
-    if (useMockApi) return mockApi.register(payload);
-    return normalizeUser(
-      await request("/api/auth/register", {
-        method: "POST",
-        body: payload,
-      })
-    );
+    if (useMockApi && !useRealCartApi) return mockApi.register(payload);
+    const data = await request("/api/auth/register", {
+      method: "POST",
+      body: payload,
+    });
+    return normalizeUser(data.user || data);
   },
 
   async login(payload) {
     if (useMockApi) {
       const user = await mockApi.login(payload);
-      try {
-        await syncBackendLogin(payload);
-      } catch (error) {
-        if (user.role === "manager") throw error;
+      if (useRealCartApi || user.role === "manager") {
+        try {
+          await syncBackendLogin(payload);
+        } catch (error) {
+          if (user.role === "manager") throw error;
+        }
       }
       return user;
     }
@@ -46,11 +47,13 @@ export const authService = {
 
   async logout() {
     if (useMockApi) {
+      const user = await mockApi.getCurrentUser();
       const result = await mockApi.logout();
-      try {
-        await syncBackendLogout();
-      } catch {
-        // Mock logout should still clear the local demo session.
+      if (useRealCartApi || user?.role === "manager") {
+        try {
+          await syncBackendLogout();
+        } catch {
+        }
       }
       return result;
     }
@@ -59,7 +62,7 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    if (useMockApi) return mockApi.getCurrentUser();
+    if (useMockApi && !useRealCartApi) return mockApi.getCurrentUser();
     try {
       return normalizeUser(await request("/api/auth/me"));
     } catch (error) {
@@ -69,7 +72,7 @@ export const authService = {
   },
 
   async changePassword(payload) {
-    if (useMockApi) return mockApi.changePassword(payload);
+    if (useMockApi && !useRealCartApi) return mockApi.changePassword(payload);
     return request("/api/auth/change-password", {
       method: "POST",
       body: payload,

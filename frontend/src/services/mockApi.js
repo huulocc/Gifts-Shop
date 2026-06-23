@@ -547,39 +547,33 @@ export const mockApi = {
     return normalizeOrderWithRelations(state, order);
   },
 
-  async recordPayment(payload) {
+  async placeOrder(orderId) {
     await delay();
     const state = loadState();
     const user = requireUser(state, "customer");
-    const order = state.orders.find((item) => item.id === payload.orderId);
+    const order = state.orders.find((item) => item.id === orderId);
     if (!order || order.customerId !== user.id) {
       error("Order not found.", { status: 404, code: "NOT_FOUND" });
     }
-    if (!["pending", "placed"].includes(order.orderStatus)) {
+    if (order.orderStatus !== "pending") {
       error("This order is not eligible for payment.", {
         status: 409,
         code: "PAYMENT_NOT_ALLOWED",
       });
     }
-    if (Number(payload.amount).toFixed(2) !== Number(order.totalAmount).toFixed(2)) {
-      error("Payment amount must match the order total.", {
-        status: 400,
-        code: "AMOUNT_MISMATCH",
-      });
-    }
     const payment = {
       id: makeId("payment"),
       orderId: order.id,
-      paymentMethod: payload.paymentMethod || order.paymentMethod,
+      paymentMethod: order.paymentMethod,
       paymentDate: new Date().toISOString(),
       amount: Number(order.totalAmount).toFixed(2),
       status: "completed",
     };
     state.payments.push(payment);
-    order.orderStatus = "paid";
+    order.orderStatus = "placed";
     order.updatedAt = new Date().toISOString();
     saveState(state);
-    return normalizePayment(payment);
+    return normalizeOrderWithRelations(state, order);
   },
 
   async getOrderPayments(orderId, params = {}) {

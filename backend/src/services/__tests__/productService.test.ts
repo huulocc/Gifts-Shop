@@ -91,6 +91,20 @@ class InMemoryProductRepository implements ProductRepository {
 
   constructor(private readonly categoryRepository: InMemoryCategoryRepository) {}
 
+  async findProductById(productId: string): Promise<Product | null> {
+    const product = this.products.get(productId);
+    if (!product || !product.isActive) return null;
+    return { ...product };
+  }
+
+  async findProductsByIds(productIds: string[]): Promise<ProductWithCategory[]> {
+    return Promise.all(
+      [...this.products.values()]
+        .filter((product) => productIds.includes(product.id))
+        .map((product) => this.withCategory(product)),
+    );
+  }
+
   async findAll(filters: ProductListFilters = {}): Promise<ProductWithCategory[]> {
     const search = filters.search?.toLowerCase().trim();
     const products = [...this.products.values()].filter((product) => {
@@ -191,11 +205,7 @@ class InMemoryProductRepository implements ProductRepository {
     if (!category) throw new Error(`No category ${product.categoryId}`);
     return {
       ...product,
-      category: {
-        id: category.id,
-        name: category.name,
-        isActive: category.isActive,
-      },
+      category,
     };
   }
 }

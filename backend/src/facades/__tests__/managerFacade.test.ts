@@ -1,11 +1,43 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { OrderListFilters, OrderRepository, RevenueSource } from '../../repositories/orderRepository';
+import type {
+  CreatePendingOrderData,
+  OrderListFilters,
+  OrderRepository,
+  RevenueSource,
+} from '../../repositories/orderRepository';
 import type { OrderDto, OrderStatusDto } from '../../types/domain';
 import { isApiError } from '../../utils/apiError';
 import { ManagerFacade } from '../managerFacade';
 
 class InMemoryOrderRepository implements OrderRepository {
   private readonly orders = new Map<string, OrderDto>();
+
+  async createPendingOrder(customerId: string, data: CreatePendingOrderData): Promise<OrderDto> {
+    const order = makeOrder({
+      id: `order-${this.orders.size + 1}`,
+      customer: {
+        id: customerId,
+        fullName: 'Customer One',
+        phoneNumber: null,
+        email: 'customer@example.com',
+        role: 'customer',
+      },
+      giftMessage: data.giftMessage,
+      orderStatus: 'pending',
+      paymentMethod: data.paymentMethod,
+      totalAmount: data.totalAmount.toFixed(2),
+      items: data.items.map((item) => ({
+        id: item.cartItemId,
+        productId: item.productId,
+        productName: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toFixed(2),
+        lineTotal: item.unitPrice.mul(item.quantity).toFixed(2),
+      })),
+    });
+    this.orders.set(order.id, order);
+    return this.clone(order);
+  }
 
   async findAllOrders(filters: OrderListFilters): Promise<OrderDto[]> {
     const query = filters.query?.toLowerCase().trim();
@@ -16,6 +48,12 @@ class InMemoryOrderRepository implements OrderRepository {
         .toLowerCase()
         .includes(query);
     });
+  }
+
+  async findOrdersByCustomer(customerId: string): Promise<OrderDto[]> {
+    return this.clone(
+      [...this.orders.values()].filter((order) => order.customer?.id === customerId),
+    );
   }
 
   async findOrderById(orderId: string): Promise<OrderDto | null> {
