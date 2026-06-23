@@ -13,7 +13,7 @@ import { formatCurrency } from "../../utils/format.js";
 import { validateCheckout } from "../../utils/validation.js";
 
 export function CheckoutPage() {
-  const { cart, loading, refreshCart, setCart } = useCart();
+  const { cart, loading, refreshCart } = useCart();
   const [values, setValues] = useState({ giftMessage: "", paymentMethod: "" });
   const [errors, setErrors] = useState({});
   const [pageError, setPageError] = useState("");
@@ -38,7 +38,7 @@ export function CheckoutPage() {
     setPageError("");
     try {
       const order = await orderService.createOrder(values);
-      await refreshCart().then(setCart);
+      await refreshCart();
       addToast({ title: "Order placed successfully." });
       navigate(`/payment/${order.id}`);
     } catch (error) {

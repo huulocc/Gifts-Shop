@@ -1,108 +1,116 @@
-import type { OrderDto, OrderStatusDto, PaymentDto, PaymentMethodDto } from '../types/domain';
-import { notImplemented } from '../utils/apiError';
+import { Prisma } from '@prisma/client';
+import type { CartRepository } from '../repositories/cartRepository';
+import type { OrderRepository, PendingOrderItem } from '../repositories/orderRepository';
+import type { ProductRepository } from '../repositories/productRepository';
+import type { PaymentService } from '../services/paymentService';
+import type { OrderDto, OrderStatusDto, PaymentMethodDto } from '../types/domain';
+import { ApiError, conflict, forbidden } from '../utils/apiError';
 
-/**
- * A single line requested by the customer when placing an order.
- */
-export interface PlaceOrderItemRequest {
-  productId: string;
-  quantity: number;
-}
-
-/**
- * Payload accepted by {@link OrderFacade.placeOrder}.
- *
- * `items` describes what the customer wants to buy. `giftMessage` and
- * `paymentMethod` are optional and may be supplied later during payment.
- */
-export interface PlaceOrderRequest {
-  items: PlaceOrderItemRequest[];
+export interface CreateOrderRequest {
   giftMessage?: string | null;
-  paymentMethod?: PaymentMethodDto | null;
-}
-
-/**
- * Payload accepted by {@link OrderFacade.recordPayment}.
- */
-export interface RecordPaymentRequest {
-  orderId: string;
   paymentMethod: PaymentMethodDto;
-  /** Amount as a decimal string (same convention as {@link PaymentDto.amount}). */
-  amount: string;
 }
 
-/**
- * Facade contract for the ordering subsystem.
- *
- * This is the single entry point other layers (controllers, other facades such
- * as `CustomerFacade`) depend on to drive the order lifecycle. It hides the
- * coordination between the order, product, cart and payment repositories behind
- * three coarse-grained operations.
- *
- * Implementations are expected to:
- * - validate inputs and enforce business rules (stock, ownership, status flow);
- * - throw an {@link ApiError} (e.g. `notFound`, `conflict`, `forbidden`) on
- *   failure rather than returning error sentinels;
- * - keep each operation transactional so partial writes never leak.
- */
 export interface OrderFacade {
-  /**
-   * Create a new order on behalf of a customer.
-   *
-   * @param customerId - Authenticated customer who owns the order.
-   * @param request - Items to buy plus optional gift message / payment method.
-   * @returns The newly created order, including its computed total and items.
-   * @throws ApiError `NOT_FOUND` if a referenced product does not exist.
-   * @throws ApiError `CONFLICT` if a product is inactive or out of stock.
-   */
-  placeOrder(customerId: string, request: PlaceOrderRequest): Promise<OrderDto>;
-
-  /**
-   * Record a payment against an existing order and advance it to `paid`.
-   *
-   * @param customerId - Authenticated customer who must own the target order.
-   * @param request - Order id, chosen payment method and amount.
-   * @returns The persisted payment record.
-   * @throws ApiError `NOT_FOUND` if the order does not exist.
-   * @throws ApiError `FORBIDDEN` if the order belongs to another customer.
-   * @throws ApiError `CONFLICT` if the order is not in a payable state or the
-   *         amount does not match the order total.
-   */
-  recordPayment(customerId: string, request: RecordPaymentRequest): Promise<PaymentDto>;
-
-  /**
-   * Transition an order to the next lifecycle status.
-   *
-   * Intended for manager-driven fulfilment (e.g. `paid` -> `completed`) and
-   * cancellation. Implementations should reject illegal transitions.
-   *
-   * @param orderId - Order to update.
-   * @param nextStatus - Desired status.
-   * @returns The updated order.
-   * @throws ApiError `NOT_FOUND` if the order does not exist.
-   * @throws ApiError `CONFLICT` if the transition is not allowed.
-   */
+  createOrder(customerId: string, request: CreateOrderRequest): Promise<OrderDto>;
+  placeOrder(customerId: string, orderId: string): Promise<OrderDto>;
   updateOrderStatus(orderId: string, nextStatus: OrderStatusDto): Promise<OrderDto>;
 }
 
-/**
- * Default {@link OrderFacade} implementation.
- *
- * The behaviour is intentionally stubbed for now — every method throws
- * `NOT_IMPLEMENTED` until the ordering workflow is built out. The signatures,
- * however, are the real contract that callers and future implementers code
- * against.
- */
 export class DefaultOrderFacade implements OrderFacade {
-  async placeOrder(_customerId: string, _request: PlaceOrderRequest): Promise<OrderDto> {
-    throw notImplemented('Order placement');
+  constructor(
+    private readonly cartRepository: CartRepository,
+    private readonly productRepository: ProductRepository,
+    private readonly orderRepository: OrderRepository,
+    private readonly paymentService: PaymentService,
+  ) {}
+
+  async createOrder(customerId: string, request: CreateOrderRequest): Promise<OrderDto> {
+    const cartItems = await this.cartRepository.findCartItemsByCustomer(customerId);
+    if (cartItems.length === 0) {
+      throw new ApiError(400, 'EMPTY_CART', 'Your cart is empty');
+    }
+
+    const products = await this.productRepository.findProductsByIds(
+      cartItems.map((item) => item.productId),
+    );
+    const productsById = new Map(products.map((product) => [product.id, product]));
+
+    let totalAmount = new Prisma.Decimal(0);
+    const orderItems: PendingOrderItem[] = cartItems.map((cartItem) => {
+      const product = productsById.get(cartItem.productId);
+      if (!product || !product.isActive) {
+        throw conflict(`Product ${cartItem.productId} is unavailable`);
+      }
+      if (product.quantity < cartItem.quantity) {
+        throw new ApiError(
+          409,
+          'STOCK_CONFLICT',
+          `Stock is no longer available for product ${cartItem.productId}`,
+        );
+      }
+
+      totalAmount = totalAmount.plus(product.unitPrice.mul(cartItem.quantity));
+      return {
+        cartItemId: cartItem.id,
+        productId: product.id,
+        quantity: cartItem.quantity,
+        unitPrice: product.unitPrice,
+      };
+    });
+
+    return this.orderRepository.createPendingOrder(customerId, {
+      giftMessage: request.giftMessage?.trim() || null,
+      paymentMethod: request.paymentMethod,
+      totalAmount,
+      items: orderItems,
+    });
   }
 
-  async recordPayment(_customerId: string, _request: RecordPaymentRequest): Promise<PaymentDto> {
-    throw notImplemented('Order payment workflow');
+  async placeOrder(customerId: string, orderId: string): Promise<OrderDto> {
+    const order = await this.getPendingOwnedOrder(customerId, orderId);
+    if (!order.paymentMethod) {
+      throw new ApiError(400, 'INVALID_PAYMENT_DATA', 'A payment method is required');
+    }
+
+    await this.paymentService.completePaymentAndPlaceOrder(
+      order.id,
+      order.paymentMethod,
+      order.totalAmount,
+    );
+    const placedOrder = await this.orderRepository.findOrderById(order.id);
+    if (!placedOrder) {
+      throw new ApiError(500, 'ORDER_STATE_ERROR', 'Order could not be loaded after placement');
+    }
+    return placedOrder;
   }
 
-  async updateOrderStatus(_orderId: string, _nextStatus: OrderStatusDto): Promise<OrderDto> {
-    throw notImplemented('Order status update');
+  async updateOrderStatus(orderId: string, nextStatus: OrderStatusDto): Promise<OrderDto> {
+    const order = await this.orderRepository.findOrderById(orderId);
+    if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Order not found');
+
+    const allowedTransitions: Record<OrderStatusDto, OrderStatusDto[]> = {
+      pending: ['placed', 'cancelled'],
+      placed: ['paid', 'cancelled'],
+      paid: ['completed', 'cancelled'],
+      cancelled: [],
+      completed: [],
+    };
+    if (!allowedTransitions[order.orderStatus].includes(nextStatus)) {
+      throw conflict(`Cannot change order status from ${order.orderStatus} to ${nextStatus}`);
+    }
+    return this.orderRepository.saveOrderStatus(orderId, nextStatus);
+  }
+
+  private async getPendingOwnedOrder(customerId: string, orderId: string): Promise<OrderDto> {
+    const order = await this.orderRepository.findOrderById(orderId);
+    if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Order not found');
+    if (order.customer?.id !== customerId) {
+      throw forbidden('You do not have permission to place this order');
+    }
+    if (order.orderStatus !== 'pending') {
+      throw conflict('Order status must be pending before placing');
+    }
+    return order;
   }
 }

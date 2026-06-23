@@ -50,15 +50,14 @@ export class CartService {
       throw new ApiError(404, 'PRODUCT_NOT_FOUND', 'Product not found');
     }
 
-    if (product.quantity < quantity) {
+    const cartItems = await this.cartRepository.findCartItemsByCustomer(customerId);
+    const existingQuantity = cartItems.find((item) => item.productId === productId)?.quantity ?? 0;
+    if (product.quantity < existingQuantity + quantity) {
       throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
     }
 
-    // Step 6: atomically reserve stock and insert/increment the CartItem.
-    const added = await this.cartRepository.reserveAndAdd(customerId, productId, quantity);
-    if (!added) {
-      throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
-    }
+    // Step 6: persist the cart line without changing Product.quantity.
+    await this.cartRepository.addItem(customerId, productId, quantity);
 
     // Step 7: return the cart item count after persistence succeeds.
     const totalItems = await this.cartRepository.countCartItems(customerId);
@@ -97,8 +96,7 @@ export class CartService {
           unitPrice: moneyToString(product.unitPrice),
           imageUrl: product.imageUrl,
           isActive: product.isActive,
-          // Remaining stock + this line's reservation is the maximum selectable quantity.
-          quantity: product.quantity + item.quantity,
+          quantity: product.quantity,
         },
       }];
     });
@@ -117,13 +115,11 @@ export class CartService {
       throw new ApiError(400, 'INVALID_QUANTITY', 'Quantity must be greater than zero');
     }
 
-    if (quantity > item.quantity) {
-      const product = await this.productRepository.findProductById(item.productId);
-      if (!product || product.quantity < quantity - item.quantity) {
-        throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
-      }
+    const product = await this.productRepository.findProductById(item.productId);
+    if (!product || product.quantity < quantity) {
+      throw new ApiError(409, 'STOCK_CONFLICT', 'Stock is no longer available for this quantity');
     }
-    const updated = await this.cartRepository.updateItemQuantityWithStock(
+    const updated = await this.cartRepository.updateItemQuantity(
       customerId,
       cartItemId,
       quantity,
@@ -141,16 +137,16 @@ export class CartService {
     return this.updateItem(customerId, cartItemId, item.quantity + difference);
   }
 
-  // Manage Cart - Remove: hard-delete item and restore its reserved product stock.
+  // Manage Cart - Remove: delete only the cart line; stock has not been reserved.
   async removeItem(customerId: string, cartItemId: string): Promise<CartDto> {
-    const deleted = await this.cartRepository.deleteCartItemWithStock(customerId, cartItemId);
+    const deleted = await this.cartRepository.deleteCartItem(customerId, cartItemId);
     if (!deleted) throw new ApiError(404, 'CART_ITEM_NOT_FOUND', 'Cart item not found');
     return this.getCart(customerId);
   }
 
-  // Manage Cart - Clear: delete all lines and restore every product quantity.
+  // Manage Cart - Clear: delete cart lines without touching product stock.
   async clearCart(customerId: string): Promise<CartDto> {
-    await this.cartRepository.clearCartWithStock(customerId);
+    await this.cartRepository.clearCart(customerId);
     return this.getCart(customerId);
   }
 

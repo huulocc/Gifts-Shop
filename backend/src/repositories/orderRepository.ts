@@ -1,6 +1,7 @@
 import { OrderStatus, Prisma, PrismaClient } from '@prisma/client';
-import type { OrderDto, OrderStatusDto } from '../types/domain';
-import { apiOrderStatusToPrisma, orderStatusToApi, paymentMethodToApi, paymentStatusToApi, roleToApi } from '../utils/enums';
+import type { OrderDto, OrderStatusDto, PaymentMethodDto } from '../types/domain';
+import { apiOrderStatusToPrisma, apiPaymentMethodToPrisma, orderStatusToApi, paymentMethodToApi, paymentStatusToApi, roleToApi } from '../utils/enums';
+import { ApiError, conflict } from '../utils/apiError';
 import { moneyToString, multiplyMoney } from '../utils/money';
 
 export interface OrderListFilters {
@@ -17,8 +18,24 @@ export interface RevenueSource {
   };
 }
 
+export interface PendingOrderItem {
+  cartItemId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: Prisma.Decimal;
+}
+
+export interface CreatePendingOrderData {
+  giftMessage: string | null;
+  paymentMethod: PaymentMethodDto;
+  totalAmount: Prisma.Decimal;
+  items: PendingOrderItem[];
+}
+
 export interface OrderRepository {
+  createPendingOrder(customerId: string, data: CreatePendingOrderData): Promise<OrderDto>;
   findAllOrders(filters: OrderListFilters): Promise<OrderDto[]>;
+  findOrdersByCustomer(customerId: string): Promise<OrderDto[]>;
   findOrderById(orderId: string): Promise<OrderDto | null>;
   saveOrderStatus(orderId: string, nextStatus: OrderStatusDto): Promise<OrderDto>;
   findOrdersForRevenueReport(): Promise<RevenueSource>;
@@ -74,6 +91,76 @@ function mapOrder(row: OrderWithDetails): OrderDto {
 export class PrismaOrderRepository implements OrderRepository {
   constructor(private readonly db: PrismaClient) {}
 
+  async createPendingOrder(customerId: string, data: CreatePendingOrderData): Promise<OrderDto> {
+    return this.db.$transaction(async (tx) => {
+      const cartItems = await tx.cartItem.findMany({
+        where: {
+          id: { in: data.items.map((item) => item.cartItemId) },
+          cart: { userId: customerId },
+        },
+      });
+
+      const cartMatches = cartItems.length === data.items.length && data.items.every((item) =>
+        cartItems.some((row) =>
+          row.id === item.cartItemId &&
+          row.productId === item.productId &&
+          row.quantity === item.quantity,
+        ),
+      );
+      if (!cartMatches) {
+        throw conflict('Cart changed while the order was being created. Please review it and try again.');
+      }
+
+      for (const item of data.items) {
+        const stockUpdate = await tx.product.updateMany({
+          where: {
+            id: item.productId,
+            isActive: true,
+            quantity: { gte: item.quantity },
+          },
+          data: { quantity: { decrement: item.quantity } },
+        });
+        if (stockUpdate.count !== 1) {
+          throw new ApiError(
+            409,
+            'STOCK_CONFLICT',
+            `Stock is no longer available for product ${item.productId}`,
+          );
+        }
+      }
+
+      const order = await tx.order.create({
+        data: {
+          customerId,
+          giftMessage: data.giftMessage,
+          paymentMethod: apiPaymentMethodToPrisma(data.paymentMethod),
+          totalAmount: data.totalAmount,
+          orderStatus: OrderStatus.PENDING,
+          items: {
+            create: data.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+        include: orderInclude,
+      });
+
+      const deleted = await tx.cartItem.deleteMany({
+        where: {
+          id: { in: data.items.map((item) => item.cartItemId) },
+          cart: { userId: customerId },
+        },
+      });
+      if (deleted.count !== data.items.length) {
+        throw conflict('Cart changed while the order was being created. Please try again.');
+      }
+
+      return mapOrder(order);
+    });
+  }
+
   async findAllOrders(filters: OrderListFilters): Promise<OrderDto[]> {
     const where: Prisma.OrderWhereInput = {};
 
@@ -96,6 +183,15 @@ export class PrismaOrderRepository implements OrderRepository {
       take: 100,
     });
 
+    return rows.map(mapOrder);
+  }
+
+  async findOrdersByCustomer(customerId: string): Promise<OrderDto[]> {
+    const rows = await this.db.order.findMany({
+      where: { customerId },
+      include: orderInclude,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
     return rows.map(mapOrder);
   }
 

@@ -80,8 +80,7 @@ async function main() {
       unitPrice: 19.99,
       imageUrl: 'https://example.com/images/classic-bracelet.jpg',
       isActive: true,
-      // One unit is reserved by the seeded CartItem below.
-      quantity: 24,
+      quantity: 25,
     },
     create: {
       id: 'seed-bracelet',
@@ -91,7 +90,7 @@ async function main() {
       unitPrice: 19.99,
       imageUrl: 'https://example.com/images/classic-bracelet.jpg',
       isActive: true,
-      quantity: 24,
+      quantity: 25,
     },
   });
 
@@ -124,7 +123,7 @@ async function main() {
     create: { userId: customer.id },
   });
 
-  // Reset the seeded customer's cart so repeated seeds keep reserved stock consistent.
+  // Reset the seeded customer's cart. CartItems do not reserve product stock.
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
   await prisma.cartItem.create({

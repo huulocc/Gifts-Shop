@@ -1,11 +1,12 @@
 import { CustomerFacade } from '../facades/customerFacade';
 import { ManagerFacade } from '../facades/managerFacade';
-import type { OrderFacade, PlaceOrderRequest } from '../facades/orderFacade';
+import type { CreateOrderRequest, OrderFacade } from '../facades/orderFacade';
 import { assertCustomer, assertManager } from '../middleware/auth';
 import type { AuthenticatedRequest } from '../types/api';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendData } from '../utils/apiResponse';
 import type { ManagerOrderListQuery, UpdateOrderStatusInput } from '../schemas/orderSchemas';
+import { createOrderSchema } from '../schemas/orderSchemas';
 
 export class OrderController {
   constructor(
@@ -17,9 +18,29 @@ export class OrderController {
   createOrder = asyncHandler(async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     assertCustomer(authReq);
-    const request = req.body as PlaceOrderRequest;
-    const order = await this.orderFacade.placeOrder(authReq.user!.id, request);
+    const validation = createOrderSchema.safeParse(req.body);
+    if (!validation.success) {
+      res.status(400).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid order data',
+          fields: Object.fromEntries(
+            validation.error.issues.map((issue) => [issue.path.join('.') || 'request', issue.message]),
+          ),
+        },
+      });
+      return;
+    }
+    const request = validation.data as CreateOrderRequest;
+    const order = await this.orderFacade.createOrder(authReq.user!.id, request);
     sendData(res, order, 201);
+  });
+
+  placeOrder = asyncHandler(async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    assertCustomer(authReq);
+    const order = await this.orderFacade.placeOrder(authReq.user!.id, req.params.id);
+    sendData(res, order);
   });
 
   listOrders = asyncHandler(async (req, res) => {
@@ -37,7 +58,7 @@ export class OrderController {
     }
 
     assertCustomer(authReq);
-    sendData(res, await this.customerFacade.listMyOrders());
+    sendData(res, await this.customerFacade.listMyOrders(authReq.user!.id));
   });
 
   getOrder = asyncHandler(async (req, res) => {
@@ -49,7 +70,7 @@ export class OrderController {
     }
 
     assertCustomer(authReq);
-    sendData(res, await this.customerFacade.getMyOrder());
+    sendData(res, await this.customerFacade.getMyOrder(authReq.user!.id, req.params.id));
   });
 
   updateStatus = asyncHandler(async (req, res) => {
