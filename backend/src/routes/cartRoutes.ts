@@ -8,7 +8,6 @@ export function cartRoutes(): Router {
   router.get('/', requireRole('customer'), controllers.cart.getCart);
   router.get('/view', requireRole('customer'), controllers.cart.getCart);
   router.get('/summary', requireRole('customer'), controllers.cart.getCartSummary);
-  // Sequence Diagram - Step 1: POST /api/cart/add enters the Add To Cart flow.
   router.post('/add', verifyAddToCartToken, controllers.cart.addToCart);
   router.post('/items', verifyAddToCartToken, controllers.cart.addToCart);
   router.patch('/items/:itemId', requireRole('customer'), controllers.cart.updateItem);

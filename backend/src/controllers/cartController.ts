@@ -16,7 +16,6 @@ export class CartController {
   addToCart = asyncHandler(async (req, res, next) => {
     const authenticatedRequest = req as AuthenticatedRequest;
 
-    // Sequence Diagram - Step 3: validate productId and quantity in the controller.
     const validation = addToCartSchema.safeParse(req.body);
     if (!validation.success) {
       res.status(400).json({
@@ -31,7 +30,6 @@ export class CartController {
     const productId = String(dto.productId);
 
     try {
-      // Sequence Diagram - Step 4: delegate business flow to CartService.
       const data = await this.cartService.addToCart(customerId, productId, dto.quantity);
 
       res.status(200).json({
@@ -40,7 +38,6 @@ export class CartController {
         data,
       });
     } catch (error) {
-      // Sequence Diagram - Step 5: stop with the specified 404 response.
       if (isApiError(error) && error.code === 'PRODUCT_NOT_FOUND') {
         res.status(404).json({ success: false, message: error.message });
         return;

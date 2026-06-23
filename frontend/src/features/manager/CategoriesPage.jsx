@@ -10,7 +10,6 @@ import { StatusBadge } from "../../components/common/StatusBadge.jsx";
 import { EmptyState, ErrorState } from "../../components/common/StateViews.jsx";
 import { useToast } from "../../contexts/ToastContext.jsx";
 import { categoryService } from "../../services/categoryService.js";
-import { productService } from "../../services/productService.js";
 import { validateCategory } from "../../utils/validation.js";
 
 const emptyCategory = {
@@ -21,7 +20,6 @@ const emptyCategory = {
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,12 +36,8 @@ export function CategoriesPage() {
     setLoading(true);
     setError("");
     try {
-      const [nextCategories, nextProducts] = await Promise.all([
-        categoryService.listCategories({ includeInactive: true, search }),
-        productService.listProducts({ includeInactive: true }),
-      ]);
+      const nextCategories = await categoryService.listManagerCategories({ search });
       setCategories(nextCategories);
-      setProducts(nextProducts);
     } catch (loadError) {
       setError(loadError.message || "Could not load categories.");
     } finally {
@@ -120,19 +114,9 @@ export function CategoriesPage() {
     }
   }
 
-  const productCountByCategory = products.reduce((counts, product) => {
-    counts[product.categoryId] = (counts[product.categoryId] || 0) + 1;
-    return counts;
-  }, {});
-
   const columns = [
     { key: "name", header: "Name" },
     { key: "description", header: "Description", render: (category) => category.description || "No description" },
-    {
-      key: "products",
-      header: "Products",
-      render: (category) => <span className="mono">{productCountByCategory[category.id] || 0}</span>,
-    },
     {
       key: "status",
       header: "Status",

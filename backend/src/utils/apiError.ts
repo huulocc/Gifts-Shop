@@ -30,10 +30,18 @@ export function forbidden(message = 'You do not have permission to access this r
   return new ApiError(403, 'FORBIDDEN', message);
 }
 
+export function badRequest(message: string, fields: Record<string, string> = {}): ApiError {
+  return new ApiError(400, 'BAD_REQUEST', message, fields);
+}
+
 export function notFound(path: string): ApiError {
   return new ApiError(404, 'NOT_FOUND', `No route matches ${path}.`);
 }
 
-export function conflict(message: string): ApiError {
-  return new ApiError(409, 'CONFLICT', message);
+export function resourceNotFound(message: string): ApiError {
+  return new ApiError(404, 'NOT_FOUND', message);
+}
+
+export function conflict(message: string, fields: Record<string, string> = {}): ApiError {
+  return new ApiError(409, 'CONFLICT', message, fields);
 }

@@ -29,8 +29,8 @@ const orderRepository = new PrismaOrderRepository(prisma);
 const paymentRepository = new PrismaPaymentRepository(prisma);
 
 const authService = new AuthService(userRepository);
-const productService = new ProductService(productRepository);
-const categoryService = new CategoryService(categoryRepository);
+const productService = new ProductService(productRepository, categoryRepository);
+const categoryService = new CategoryService(categoryRepository, productRepository);
 const cartService = new CartService(cartRepository, productRepository);
 const paymentService = new PaymentService(paymentRepository);
 

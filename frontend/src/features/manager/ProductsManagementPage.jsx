@@ -50,8 +50,8 @@ export function ProductsManagementPage() {
     setError("");
     try {
       const [nextProducts, nextCategories] = await Promise.all([
-        productService.listProducts({ includeInactive: true, search, categoryId }),
-        categoryService.listCategories({ includeInactive: true }),
+        productService.listManagerProducts({ search, categoryId }),
+        categoryService.listManagerCategories(),
       ]);
       setProducts(nextProducts);
       setCategories(nextCategories);

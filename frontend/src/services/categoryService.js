@@ -9,10 +9,14 @@ export const categoryService = {
     return (categories || []).map((category) => normalizeCategory(category));
   },
 
+  async listManagerCategories(params = {}) {
+    const categories = await request(`/api/manager/categories${buildQuery(params)}`);
+    return (categories || []).map((category) => normalizeCategory(category));
+  },
+
   async createCategory(payload) {
-    if (useMockApi) return mockApi.createCategory(payload);
     return normalizeCategory(
-      await request("/api/categories", {
+      await request("/api/manager/categories", {
         method: "POST",
         body: payload,
       })
@@ -20,9 +24,8 @@ export const categoryService = {
   },
 
   async updateCategory(id, payload) {
-    if (useMockApi) return mockApi.updateCategory(id, payload);
     return normalizeCategory(
-      await request(`/api/categories/${id}`, {
+      await request(`/api/manager/categories/${id}`, {
         method: "PUT",
         body: payload,
       })
@@ -30,9 +33,8 @@ export const categoryService = {
   },
 
   async softDisableCategory(id) {
-    if (useMockApi) return mockApi.softDisableCategory(id);
     return normalizeCategory(
-      await request(`/api/categories/${id}`, {
+      await request(`/api/manager/categories/${id}`, {
         method: "DELETE",
       })
     );

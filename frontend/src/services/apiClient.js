@@ -6,7 +6,6 @@ export const useMockApi =
   import.meta.env.VITE_USE_MOCK_API === "true" ||
   (!API_BASE_URL && import.meta.env.DEV);
 
-// Keep unfinished storefront APIs mocked while Auth + Manage Cart use the real backend.
 export const useRealCartApi = import.meta.env.VITE_USE_REAL_CART_API === "true";
 
 export class ApiError extends Error {

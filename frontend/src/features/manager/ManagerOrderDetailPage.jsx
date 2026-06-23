@@ -10,7 +10,7 @@ import { useToast } from "../../contexts/ToastContext.jsx";
 import { orderService } from "../../services/orderService.js";
 import { orderStatuses } from "../../utils/constants.js";
 import { formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
-import { validateOrderStatus } from "../../utils/validation.js";
+import { validateOrderStatusTransition } from "../../utils/validation.js";
 
 export function ManagerOrderDetailPage() {
   const { orderId } = useParams();
@@ -43,7 +43,7 @@ export function ManagerOrderDetailPage() {
 
   async function updateStatus() {
     if (!order) return;
-    const message = validateOrderStatus(statusDraft);
+    const message = validateOrderStatusTransition(order.orderStatus, statusDraft);
     setStatusError(message);
     if (message) return;
     setUpdating(true);

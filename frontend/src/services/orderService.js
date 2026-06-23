@@ -4,7 +4,6 @@ import { normalizeOrder } from "./normalizers.js";
 
 export const orderService = {
   async createOrder(payload) {
-    // An order consumes the real customer cart, so both must use the same data source.
     if (useMockApi && !useRealCartApi) return mockApi.createOrder(payload);
     return normalizeOrder(
       await request("/api/orders", {

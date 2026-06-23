@@ -17,7 +17,6 @@ export interface CartRepository {
 export class PrismaCartRepository implements CartRepository {
   constructor(private readonly db: PrismaClient) {}
 
-  // Manage Cart - View: select all CartItems owned by the authenticated customer.
   async findCartItemsByCustomer(customerId: string): Promise<CartItem[]> {
     return this.db.cartItem.findMany({
       where: { cart: { userId: customerId } },
@@ -31,7 +30,6 @@ export class PrismaCartRepository implements CartRepository {
     });
   }
 
-  // Cart only stores purchase intent. Product stock is decremented during Place Order.
   async addItem(customerId: string, productId: string, quantity: number): Promise<CartItem> {
     return this.db.$transaction(async (tx) => {
       const cart = await tx.cart.upsert({
@@ -70,7 +68,6 @@ export class PrismaCartRepository implements CartRepository {
     await this.db.cartItem.deleteMany({ where: { cart: { userId: customerId } } });
   }
 
-  // Sequence Diagram - Step 7: sum quantities after insert/update.
   async countCartItems(customerId: string): Promise<number> {
     const result = await this.db.cartItem.aggregate({
       where: { cart: { userId: customerId } },

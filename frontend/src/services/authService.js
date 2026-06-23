@@ -1,11 +1,19 @@
-import {
-  buildQuery,
-  request,
-  useMockApi,
-  useRealCartApi,
-} from "./apiClient.js";
+import { API_BASE_URL, buildQuery, request, useMockApi, useRealCartApi } from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeUser } from "./normalizers.js";
+
+async function syncBackendLogin(payload) {
+  if (!API_BASE_URL) return;
+  await request("/api/auth/login", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+async function syncBackendLogout() {
+  if (!API_BASE_URL) return;
+  await request("/api/auth/logout", { method: "POST" });
+}
 
 export const authService = {
   async register(payload) {
@@ -18,7 +26,18 @@ export const authService = {
   },
 
   async login(payload) {
-    if (useMockApi && !useRealCartApi) return mockApi.login(payload);
+    if (useMockApi) {
+      const user = await mockApi.login(payload);
+      if (useRealCartApi || user.role === "manager") {
+        try {
+          await syncBackendLogin(payload);
+        } catch (error) {
+          if (user.role === "manager") throw error;
+        }
+      }
+      return user;
+    }
+
     const data = await request("/api/auth/login", {
       method: "POST",
       body: payload,
@@ -27,7 +46,18 @@ export const authService = {
   },
 
   async logout() {
-    if (useMockApi && !useRealCartApi) return mockApi.logout();
+    if (useMockApi) {
+      const user = await mockApi.getCurrentUser();
+      const result = await mockApi.logout();
+      if (useRealCartApi || user?.role === "manager") {
+        try {
+          await syncBackendLogout();
+        } catch {
+        }
+      }
+      return result;
+    }
+
     return request("/api/auth/logout", { method: "POST" });
   },
 

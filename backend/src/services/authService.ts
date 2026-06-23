@@ -48,7 +48,6 @@ export class AuthService {
       phoneNumber: input.phoneNumber ?? null,
       email: input.email,
       passwordHash,
-      // Self-registration only creates customers; managers are provisioned out of band.
       role: Role.CUSTOMER,
     });
 

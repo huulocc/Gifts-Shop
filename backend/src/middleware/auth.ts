@@ -71,7 +71,6 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   });
 }
 
-// Sequence Diagram - Step 2: verify the JWT before Add To Cart reaches the controller.
 export function verifyAddToCartToken(
   req: AuthenticatedRequest,
   res: Response,
