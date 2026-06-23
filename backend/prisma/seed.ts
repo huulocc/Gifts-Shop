@@ -123,15 +123,11 @@ async function main() {
     create: { userId: customer.id },
   });
 
-  await prisma.cartItem.upsert({
-    where: {
-      cartId_productId: {
-        cartId: cart.id,
-        productId: bracelet.id,
-      },
-    },
-    update: { quantity: 1 },
-    create: {
+  // Reset the seeded customer's cart. CartItems do not reserve product stock.
+  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+  await prisma.cartItem.create({
+    data: {
       cartId: cart.id,
       productId: bracelet.id,
       quantity: 1,

@@ -8,6 +8,7 @@ export function orderRoutes(): Router {
   const router = Router();
 
   router.post('/', requireRole('customer'), controllers.orders.createOrder);
+  router.post('/:id/place', requireRole('customer'), controllers.orders.placeOrder);
   router.get('/', authenticateOptional, validateQuery(managerOrderListQuerySchema), controllers.orders.listOrders);
   router.get('/:id', authenticateOptional, controllers.orders.getOrder);
   router.patch(

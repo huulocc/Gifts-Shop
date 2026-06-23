@@ -1,20 +1,24 @@
-import { buildQuery, request, useMockApi } from "./apiClient.js";
+import {
+  buildQuery,
+  request,
+  useMockApi,
+  useRealCartApi,
+} from "./apiClient.js";
 import { mockApi } from "./mockApi.js";
 import { normalizeUser } from "./normalizers.js";
 
 export const authService = {
   async register(payload) {
-    if (useMockApi) return mockApi.register(payload);
-    return normalizeUser(
-      await request("/api/auth/register", {
-        method: "POST",
-        body: payload,
-      })
-    );
+    if (useMockApi && !useRealCartApi) return mockApi.register(payload);
+    const data = await request("/api/auth/register", {
+      method: "POST",
+      body: payload,
+    });
+    return normalizeUser(data.user || data);
   },
 
   async login(payload) {
-    if (useMockApi) return mockApi.login(payload);
+    if (useMockApi && !useRealCartApi) return mockApi.login(payload);
     const data = await request("/api/auth/login", {
       method: "POST",
       body: payload,
@@ -23,12 +27,12 @@ export const authService = {
   },
 
   async logout() {
-    if (useMockApi) return mockApi.logout();
+    if (useMockApi && !useRealCartApi) return mockApi.logout();
     return request("/api/auth/logout", { method: "POST" });
   },
 
   async getCurrentUser() {
-    if (useMockApi) return mockApi.getCurrentUser();
+    if (useMockApi && !useRealCartApi) return mockApi.getCurrentUser();
     try {
       return normalizeUser(await request("/api/auth/me"));
     } catch (error) {
@@ -38,7 +42,7 @@ export const authService = {
   },
 
   async changePassword(payload) {
-    if (useMockApi) return mockApi.changePassword(payload);
+    if (useMockApi && !useRealCartApi) return mockApi.changePassword(payload);
     return request("/api/auth/change-password", {
       method: "POST",
       body: payload,

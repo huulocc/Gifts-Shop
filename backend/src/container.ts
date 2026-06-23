@@ -31,12 +31,17 @@ const paymentRepository = new PrismaPaymentRepository(prisma);
 const authService = new AuthService(userRepository);
 const productService = new ProductService(productRepository);
 const categoryService = new CategoryService(categoryRepository);
-const cartService = new CartService(cartRepository);
+const cartService = new CartService(cartRepository, productRepository);
 const paymentService = new PaymentService(paymentRepository);
 
-const customerFacade = new CustomerFacade();
+const customerFacade = new CustomerFacade(orderRepository);
 const managerFacade = new ManagerFacade(orderRepository);
-const orderFacade: OrderFacade = new DefaultOrderFacade();
+const orderFacade: OrderFacade = new DefaultOrderFacade(
+  cartRepository,
+  productRepository,
+  orderRepository,
+  paymentService,
+);
 
 export const controllers = {
   auth: new AuthController(authService),
