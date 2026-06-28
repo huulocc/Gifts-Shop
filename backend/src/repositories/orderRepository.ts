@@ -1,5 +1,5 @@
 import { OrderStatus, Prisma, PrismaClient } from '@prisma/client';
-import type { OrderDto, OrderStatusDto, PaymentMethodDto } from '../types/domain';
+import type { AddressDto, OrderDto, OrderStatusDto, PaymentMethodDto } from '../types/domain';
 import { apiOrderStatusToPrisma, apiPaymentMethodToPrisma, orderStatusToApi, paymentMethodToApi, paymentStatusToApi, roleToApi } from '../utils/enums';
 import { ApiError, conflict } from '../utils/apiError';
 import { moneyToString, multiplyMoney } from '../utils/money';
@@ -26,8 +26,13 @@ export interface PendingOrderItem {
 }
 
 export interface CreatePendingOrderData {
+  recipientName: string;
+  recipientPhone: string;
+  shippingAddress: AddressDto;
+  voucherId: string | null;
   giftMessage: string | null;
   paymentMethod: PaymentMethodDto;
+  discountAmount: Prisma.Decimal;
   totalAmount: Prisma.Decimal;
   items: PendingOrderItem[];
 }
@@ -43,6 +48,8 @@ export interface OrderRepository {
 
 const orderInclude = {
   customer: true,
+  address: true,
+  voucher: true,
   items: {
     include: {
       product: true,
@@ -54,6 +61,11 @@ const orderInclude = {
 type OrderWithDetails = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 
 function mapOrder(row: OrderWithDetails): OrderDto {
+  const subtotalAmount = row.items.reduce(
+    (sum, item) => sum.plus(item.unitPrice.mul(item.quantity)),
+    new Prisma.Decimal(0),
+  );
+
   return {
     id: row.id,
     customer: {
@@ -63,9 +75,28 @@ function mapOrder(row: OrderWithDetails): OrderDto {
       email: row.customer.email,
       role: roleToApi(row.customer.role),
     },
+    recipientName: row.recipientName,
+    recipientPhone: row.recipientPhone,
+    shippingAddress: row.address
+      ? {
+          state: row.address.state,
+          city: row.address.city,
+          street: row.address.street,
+          buildingNumber: row.address.buildingNumber,
+        }
+      : null,
+    voucher: row.voucher
+      ? {
+          id: row.voucher.id,
+          code: row.voucher.code,
+          percentage: moneyToString(row.voucher.percentage),
+        }
+      : null,
     giftMessage: row.giftMessage,
     orderStatus: orderStatusToApi(row.orderStatus),
     paymentMethod: paymentMethodToApi(row.paymentMethod),
+    subtotalAmount: moneyToString(subtotalAmount),
+    discountAmount: moneyToString(row.discountAmount),
     totalAmount: moneyToString(row.totalAmount),
     items: row.items.map((item) => ({
       id: item.id,
@@ -132,10 +163,17 @@ export class PrismaOrderRepository implements OrderRepository {
       const order = await tx.order.create({
         data: {
           customerId,
+          voucherId: data.voucherId,
+          recipientName: data.recipientName,
+          recipientPhone: data.recipientPhone,
           giftMessage: data.giftMessage,
           paymentMethod: apiPaymentMethodToPrisma(data.paymentMethod),
+          discountAmount: data.discountAmount,
           totalAmount: data.totalAmount,
           orderStatus: OrderStatus.PENDING,
+          address: {
+            create: data.shippingAddress,
+          },
           items: {
             create: data.items.map((item) => ({
               productId: item.productId,
@@ -171,6 +209,8 @@ export class PrismaOrderRepository implements OrderRepository {
     if (filters.query) {
       where.OR = [
         { id: { contains: filters.query, mode: 'insensitive' } },
+        { recipientName: { contains: filters.query, mode: 'insensitive' } },
+        { recipientPhone: { contains: filters.query, mode: 'insensitive' } },
         { customer: { fullName: { contains: filters.query, mode: 'insensitive' } } },
         { customer: { email: { contains: filters.query, mode: 'insensitive' } } },
       ];

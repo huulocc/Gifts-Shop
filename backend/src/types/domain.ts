@@ -49,12 +49,38 @@ export interface PaymentDto {
   status: PaymentStatusDto;
 }
 
+export interface AddressDto {
+  state: string;
+  city: string;
+  street: string;
+  buildingNumber: string;
+}
+
+export interface VoucherDto {
+  id: string;
+  code: string;
+  percentage: string;
+}
+
+export interface VoucherQuoteDto {
+  voucher: VoucherDto;
+  subtotalAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+}
+
 export interface OrderDto {
   id: string;
   customer?: UserDto;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  shippingAddress: AddressDto | null;
+  voucher: VoucherDto | null;
   giftMessage: string | null;
   orderStatus: OrderStatusDto;
   paymentMethod: PaymentMethodDto | null;
+  subtotalAmount: string;
+  discountAmount: string;
   totalAmount: string;
   items: OrderItemDto[];
   payments?: PaymentDto[];

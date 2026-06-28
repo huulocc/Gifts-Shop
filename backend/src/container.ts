@@ -6,6 +6,7 @@ import { OrderController } from './controllers/orderController';
 import { PaymentController } from './controllers/paymentController';
 import { ProductController } from './controllers/productController';
 import { ReportController } from './controllers/reportController';
+import { VoucherController } from './controllers/voucherController';
 import { CustomerFacade } from './facades/customerFacade';
 import { ManagerFacade } from './facades/managerFacade';
 import { DefaultOrderFacade, type OrderFacade } from './facades/orderFacade';
@@ -15,11 +16,13 @@ import { PrismaOrderRepository } from './repositories/orderRepository';
 import { PrismaPaymentRepository } from './repositories/paymentRepository';
 import { PrismaProductRepository } from './repositories/productRepository';
 import { PrismaUserRepository } from './repositories/userRepository';
+import { PrismaVoucherRepository } from './repositories/voucherRepository';
 import { AuthService } from './services/authService';
 import { CartService } from './services/cartService';
 import { CategoryService } from './services/categoryService';
 import { PaymentService } from './services/paymentService';
 import { ProductService } from './services/productService';
+import { VoucherService } from './services/voucherService';
 
 const userRepository = new PrismaUserRepository(prisma);
 const productRepository = new PrismaProductRepository(prisma);
@@ -27,12 +30,14 @@ const categoryRepository = new PrismaCategoryRepository(prisma);
 const cartRepository = new PrismaCartRepository(prisma);
 const orderRepository = new PrismaOrderRepository(prisma);
 const paymentRepository = new PrismaPaymentRepository(prisma);
+const voucherRepository = new PrismaVoucherRepository(prisma);
 
 const authService = new AuthService(userRepository);
 const productService = new ProductService(productRepository, categoryRepository);
 const categoryService = new CategoryService(categoryRepository, productRepository);
 const cartService = new CartService(cartRepository, productRepository);
 const paymentService = new PaymentService(paymentRepository);
+const voucherService = new VoucherService(cartRepository, productRepository, voucherRepository);
 
 const customerFacade = new CustomerFacade(orderRepository);
 const managerFacade = new ManagerFacade(orderRepository);
@@ -41,6 +46,7 @@ const orderFacade: OrderFacade = new DefaultOrderFacade(
   productRepository,
   orderRepository,
   paymentService,
+  voucherRepository,
 );
 
 export const controllers = {
@@ -50,5 +56,6 @@ export const controllers = {
   cart: new CartController(cartService),
   orders: new OrderController(customerFacade, managerFacade, orderFacade),
   payments: new PaymentController(paymentService),
+  vouchers: new VoucherController(voucherService),
   reports: new ReportController(managerFacade),
 };

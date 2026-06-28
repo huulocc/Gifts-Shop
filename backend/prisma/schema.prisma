@@ -51,6 +51,19 @@ model User {
   @@map("users")
 }
 
+model Voucher {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  percentage Decimal  @db.Decimal(5, 2)
+  isActive   Boolean  @default(true)
+  orders     Order[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("vouchers")
+}
+
 model Category {
   id          String    @id @default(cuid())
   name        String    @unique
@@ -112,22 +125,43 @@ model CartItem {
 }
 
 model Order {
-  id            String         @id @default(cuid())
-  customerId    String
-  customer      User           @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  giftMessage   String?
-  orderStatus   OrderStatus    @default(PENDING)
-  paymentMethod PaymentMethod?
-  totalAmount   Decimal        @db.Decimal(12, 2)
-  items         OrderItem[]
-  payments      Payment[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  customerId     String
+  customer       User           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  voucherId      String?
+  voucher        Voucher?       @relation(fields: [voucherId], references: [id], onDelete: SetNull)
+  recipientName  String?
+  recipientPhone String?
+  giftMessage    String?
+  orderStatus    OrderStatus    @default(PENDING)
+  paymentMethod  PaymentMethod?
+  discountAmount Decimal        @default(0) @db.Decimal(12, 2)
+  totalAmount    Decimal        @db.Decimal(12, 2)
+  address        Address?
+  items          OrderItem[]
+  payments       Payment[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([customerId])
+  @@index([voucherId])
   @@index([orderStatus])
   @@index([createdAt])
   @@map("orders")
+}
+
+model Address {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  state          String
+  city           String
+  street         String
+  buildingNumber String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("addresses")
 }
 
 model OrderItem {

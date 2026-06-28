@@ -8,6 +8,7 @@ import { orderRoutes } from './orderRoutes';
 import { paymentRoutes } from './paymentRoutes';
 import { productRoutes } from './productRoutes';
 import { reportRoutes } from './reportRoutes';
+import { voucherRoutes } from './voucherRoutes';
 
 export function apiRoutes(): Router {
   const router = Router();
@@ -20,6 +21,7 @@ export function apiRoutes(): Router {
   router.use('/cart', cartRoutes());
   router.use('/orders', orderRoutes());
   router.use('/payments', paymentRoutes());
+  router.use('/vouchers', voucherRoutes());
   router.use('/reports', reportRoutes());
 
   return router;
