@@ -60,7 +60,7 @@ export function ProductDetailPage() {
       addToast({
         type: "error",
         title: "Customer account required.",
-        message: "Managers do not use cart or checkout flows.",
+        message: "Please switch to a customer account before adding gifts to cart.",
       });
       return;
     }
@@ -154,7 +154,7 @@ export function ProductDetailPage() {
               <strong>{product.category?.name || "Gift"}</strong>
             </div>
             <div>
-              <span>Stock</span>
+              <span>Availability</span>
               <strong>{product.quantity} available</strong>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function ProductDetailPage() {
               label="Product quantity"
             />
             {quantityError ? <span className="field-error" role="alert">{quantityError}</span> : null}
-            <p className="muted">Choose from the available stock before adding this gift to cart.</p>
+            <p className="muted">Choose a quantity before adding this gift to cart.</p>
           </div>
           <Button onClick={handleAdd} loading={adding} loadingLabel="Adding to cart" disabled={!canAdd} full>
             {canAdd ? "Add to cart" : "Out of stock"}
@@ -187,7 +187,7 @@ export function ProductDetailPage() {
       <section className="stack-lg related-products-section" aria-labelledby="related-title">
         <header className="storefront-section-header">
           <h2 id="related-title">More from this category</h2>
-          <p className="lead">Keep browsing active gifts with the same category direction.</p>
+          <p className="lead">Keep browsing gifts from the same category.</p>
         </header>
         <ProductGrid
           products={related}

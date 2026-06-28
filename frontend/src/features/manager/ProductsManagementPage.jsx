@@ -254,7 +254,7 @@ export function ProductsManagementPage() {
     <section className="stack-lg entry">
       <ManagerPageHeader
         title="Product and stock management"
-        description="Maintain products and update database stock quantity for customer ordering."
+        description="Maintain product details and quantities shown to customers."
         action={<Button onClick={openCreate}>Create product</Button>}
       />
 
@@ -279,7 +279,7 @@ export function ProductsManagementPage() {
         <label className="field">
           <span>Active state</span>
           <select className="select" value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
-            <option value="all">All records</option>
+            <option value="all">All products</option>
             <option value="active">Active only</option>
             <option value="inactive">Inactive only</option>
           </select>
@@ -290,7 +290,7 @@ export function ProductsManagementPage() {
         <ErrorState message={error} onRetry={loadProducts} />
       ) : (
         <DataTable
-          caption="Manager product and stock list"
+          caption="Product list"
           columns={columns}
           rows={visibleProducts}
           rowKey={(product) => product.id}
@@ -298,7 +298,7 @@ export function ProductsManagementPage() {
           emptyState={
             <EmptyState
               title="No products yet"
-              description="Create a product with stock quantity before customer browsing."
+              description="Create a product before it appears in the customer shop."
               actionLabel="Create product"
               onAction={openCreate}
             />

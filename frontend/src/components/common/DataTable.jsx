@@ -13,7 +13,7 @@ export function DataTable({ caption, columns, rows, rowKey, loading = false, emp
   }
 
   if (!rows.length) {
-    return emptyState || <EmptyState title="No records found" description="There is nothing to show yet." />;
+    return emptyState || <EmptyState title="Nothing to show" description="There is nothing here yet." />;
   }
 
   return (

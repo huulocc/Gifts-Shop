@@ -63,7 +63,7 @@ export function HomePage() {
         <div className="container stack-lg">
           <header className="storefront-section-header">
             <h2 className="page-title">Curated gifts to start with</h2>
-            <p className="lead">Image-first cards keep category, price, stock, and cart action easy to scan.</p>
+            <p className="lead">Find gift picks with clear prices, categories, and availability before adding them to your cart.</p>
           </header>
           {error ? (
             <ErrorState message={error} onRetry={loadHome} />
