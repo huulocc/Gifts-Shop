@@ -53,6 +53,7 @@ export const authService = {
         try {
           await syncBackendLogout();
         } catch {
+          // Best-effort backend session cleanup while using mock auth.
         }
       }
       return result;

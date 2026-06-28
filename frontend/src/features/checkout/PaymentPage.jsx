@@ -7,13 +7,13 @@ import { StatusBadge } from "../../components/common/StatusBadge.jsx";
 import { DetailSkeleton, ErrorState } from "../../components/common/StateViews.jsx";
 import { useToast } from "../../contexts/ToastContext.jsx";
 import { orderService } from "../../services/orderService.js";
-import { formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
+import { formatAddress, formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
 
 export function PaymentPage() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [recording, setRecording] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { addToast } = useToast();
@@ -36,17 +36,17 @@ export function PaymentPage() {
 
   async function placeOrder() {
     if (!order) return;
-    setRecording(true);
+    setConfirming(true);
     setError("");
     try {
       const nextOrder = await orderService.placeOrder(order.id);
       setOrder(nextOrder);
-      setSuccess("Payment recorded.");
-      addToast({ title: "Payment recorded." });
+      setSuccess("Payment confirmed.");
+      addToast({ title: "Payment confirmed." });
     } catch (paymentError) {
-      setError(paymentError.message || "Could not record payment.");
+      setError(paymentError.message || "Could not confirm payment.");
     } finally {
-      setRecording(false);
+      setConfirming(false);
     }
   }
 
@@ -66,15 +66,15 @@ export function PaymentPage() {
     );
   }
 
-  const canRecordPayment = order.orderStatus === "pending";
-  const paymentRecorded = ["placed", "paid", "completed"].includes(order.orderStatus);
+  const canConfirmPayment = order.orderStatus === "pending";
+  const paymentConfirmed = ["placed", "paid", "completed"].includes(order.orderStatus);
 
   return (
     <section className="container section stack-lg entry">
       <PageHeader
         eyebrow="Payment"
-        title="Record payment"
-        description="This screen records a transaction only. It does not redirect to a payment provider."
+        title="Confirm payment"
+        description="Review your order total and confirm the payment method you selected."
       />
       {error ? <div className="alert alert-error">{error}</div> : null}
       {success ? <div className="alert alert-success">{success}</div> : null}
@@ -89,14 +89,26 @@ export function PaymentPage() {
           </div>
           <div className="stack">
             <p>
+              Recipient: <strong>{order.recipientName || "Not provided"}</strong>
+            </p>
+            <p className="muted">
+              {order.recipientPhone || "No recipient phone"} - {formatAddress(order.shippingAddress)}
+            </p>
+            <p>
               Method: <strong>{formatStatus(order.paymentMethod)}</strong>
             </p>
+            {Number(order.discountAmount || 0) > 0 ? (
+              <p>
+                Discount: <strong className="price">-{formatCurrency(order.discountAmount)}</strong>
+                {order.voucher?.code ? <span className="muted"> using {order.voucher.code}</span> : null}
+              </p>
+            ) : null}
             <p>
               Amount due: <strong className="price">{formatCurrency(order.totalAmount)}</strong>
             </p>
             {order.payments.length ? (
               <div className="stack">
-                <h3>Recorded payments</h3>
+                <h3>Payment details</h3>
                 {order.payments.map((payment) => (
                   <p className="muted" key={payment.id}>
                     {formatStatus(payment.status)} payment for {formatCurrency(payment.amount)} on{" "}
@@ -107,14 +119,14 @@ export function PaymentPage() {
             ) : null}
           </div>
           <div className="cluster">
-            {canRecordPayment ? (
-              <Button onClick={placeOrder} loading={recording}>
-                Record payment
+            {canConfirmPayment ? (
+              <Button onClick={placeOrder} loading={confirming}>
+                Confirm payment
               </Button>
-            ) : paymentRecorded ? (
-              <span className="alert alert-success">Payment has already been recorded.</span>
+            ) : paymentConfirmed ? (
+              <span className="alert alert-success">Payment has already been confirmed.</span>
             ) : (
-              <span className="alert alert-error">Payment is unavailable for this order.</span>
+              <span className="alert alert-error">Payment cannot be changed for this order.</span>
             )}
             <Link className="btn btn-secondary" to={`/orders/${order.id}`}>
               View order
@@ -123,10 +135,12 @@ export function PaymentPage() {
         </section>
         <OrderSummary
           itemCount={order.items.reduce((sum, item) => sum + item.quantity, 0)}
-          subtotal={order.totalAmount}
+          subtotal={order.subtotalAmount}
+          discount={order.discountAmount}
+          voucher={order.voucher}
           total={order.totalAmount}
           paymentMethod={order.paymentMethod}
-          note="After successful recording, the order status becomes placed."
+          note="After confirmation, your order will move into processing."
         />
       </div>
     </section>

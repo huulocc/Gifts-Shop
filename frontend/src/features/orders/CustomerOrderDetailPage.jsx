@@ -7,7 +7,7 @@ import { PageHeader } from "../../components/common/PageHeader.jsx";
 import { StatusBadge } from "../../components/common/StatusBadge.jsx";
 import { DetailSkeleton, ErrorState } from "../../components/common/StateViews.jsx";
 import { orderService } from "../../services/orderService.js";
-import { formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
+import { formatAddress, formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
 
 export function CustomerOrderDetailPage() {
   const { orderId } = useParams();
@@ -82,18 +82,32 @@ export function CustomerOrderDetailPage() {
                 Gift message: <span className="muted">{order.giftMessage}</span>
               </p>
             ) : null}
+            <div className="stack">
+              <h3>Delivery</h3>
+              <p>
+                Recipient: <strong>{order.recipientName || "Not provided"}</strong>
+              </p>
+              <p className="muted">{order.recipientPhone || "No recipient phone"}</p>
+              <p className="muted">{formatAddress(order.shippingAddress)}</p>
+            </div>
+            {Number(order.discountAmount || 0) > 0 ? (
+              <p>
+                Voucher: <strong>{order.voucher?.code || "Discount"}</strong>{" "}
+                <span className="muted">saved {formatCurrency(order.discountAmount)}</span>
+              </p>
+            ) : null}
             {["pending", "placed"].includes(order.orderStatus) ? (
-              <Button to={`/payment/${order.id}`}>Record payment</Button>
+              <Button to={`/payment/${order.id}`}>Confirm payment</Button>
             ) : null}
           </section>
           <DataTable
-            caption="Order item snapshots"
+            caption="Order items"
             columns={columns}
             rows={order.items}
             rowKey={(item) => item.id}
           />
           <section className="surface surface-padded stack">
-            <h2>Payment records</h2>
+            <h2>Payment details</h2>
             {order.payments.length ? (
               order.payments.map((payment) => (
                 <p className="muted" key={payment.id}>
@@ -102,16 +116,18 @@ export function CustomerOrderDetailPage() {
                 </p>
               ))
             ) : (
-              <p className="muted">No payment has been recorded for this order.</p>
+              <p className="muted">Payment has not been confirmed yet.</p>
             )}
           </section>
         </div>
         <OrderSummary
           itemCount={order.items.reduce((sum, item) => sum + item.quantity, 0)}
-          subtotal={order.totalAmount}
+          subtotal={order.subtotalAmount}
+          discount={order.discountAmount}
+          voucher={order.voucher}
           total={order.totalAmount}
           paymentMethod={order.paymentMethod}
-          note="Totals use item price snapshots from the order."
+          note="This total reflects the prices from your checkout."
         />
       </div>
     </section>

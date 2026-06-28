@@ -5,6 +5,8 @@ export function OrderSummary({
   title = "Order summary",
   itemCount,
   subtotal,
+  discount,
+  voucher,
   total,
   paymentMethod,
   actionLabel,
@@ -25,6 +27,12 @@ export function OrderSummary({
         <span>Subtotal</span>
         <strong className="mono">{formatCurrency(subtotal)}</strong>
       </div>
+      {Number(discount || 0) > 0 ? (
+        <div className="summary-line">
+          <span>{voucher?.code ? `Voucher ${voucher.code}` : "Discount"}</span>
+          <strong className="mono">-{formatCurrency(discount)}</strong>
+        </div>
+      ) : null}
       {paymentMethod ? (
         <div className="summary-line">
           <span>Payment method</span>

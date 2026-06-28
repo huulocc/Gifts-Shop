@@ -113,9 +113,19 @@ export function createInitialMockState() {
     {
       id: "seed-paid-order",
       customerId: customer.id,
+      recipientName: "Mai Nguyen",
+      recipientPhone: "0912345678",
+      shippingAddress: {
+        state: "Ho Chi Minh",
+        city: "Thu Duc",
+        street: "Vo Van Ngan",
+        buildingNumber: "12A",
+      },
       giftMessage: "Happy birthday!",
       orderStatus: "paid",
       paymentMethod: "cash",
+      subtotalAmount: "34.50",
+      discountAmount: "0.00",
       totalAmount: "34.50",
       items: [
         {
@@ -133,10 +143,25 @@ export function createInitialMockState() {
     {
       id: "seed-placed-order",
       customerId: customer.id,
+      recipientName: "An Tran",
+      recipientPhone: "0987654321",
+      shippingAddress: {
+        state: "Ho Chi Minh",
+        city: "District 1",
+        street: "Le Loi",
+        buildingNumber: "45",
+      },
+      voucher: {
+        id: "voucher-gift10",
+        code: "GIFT10",
+        percentage: "10.00",
+      },
       giftMessage: "For the office exchange.",
       orderStatus: "placed",
       paymentMethod: "bank_transfer",
-      totalAmount: "36.74",
+      subtotalAmount: "36.74",
+      discountAmount: "3.67",
+      totalAmount: "33.07",
       items: [
         {
           id: "seed-placed-order-item-1",
@@ -171,6 +196,27 @@ export function createInitialMockState() {
     },
   ];
 
+  const vouchers = [
+    {
+      id: "voucher-gift10",
+      code: "GIFT10",
+      percentage: "10.00",
+      isActive: true,
+    },
+    {
+      id: "voucher-thankyou15",
+      code: "THANKYOU15",
+      percentage: "15.00",
+      isActive: true,
+    },
+    {
+      id: "voucher-inactive20",
+      code: "INACTIVE20",
+      percentage: "20.00",
+      isActive: false,
+    },
+  ];
+
   return {
     sessionUserId: null,
     users: [manager, customer],
@@ -191,5 +237,6 @@ export function createInitialMockState() {
     ],
     orders,
     payments,
+    vouchers,
   };
 }

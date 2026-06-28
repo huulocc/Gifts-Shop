@@ -10,7 +10,7 @@ export function formatCurrency(value) {
 }
 
 export function formatDate(value) {
-  if (!value) return "Not recorded";
+  if (!value) return "Date unavailable";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "2-digit",
@@ -19,7 +19,7 @@ export function formatDate(value) {
 }
 
 export function formatDateTime(value) {
-  if (!value) return "Not recorded";
+  if (!value) return "Date unavailable";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "2-digit",
@@ -52,4 +52,16 @@ export function calculateLineTotal(item) {
 export function makeOrderIdLabel(id) {
   if (!id) return "Order";
   return `Order ${id.slice(0, 10)}`;
+}
+
+export function formatAddress(address) {
+  if (!address) return "No delivery address provided.";
+  return [
+    address.buildingNumber,
+    address.street,
+    address.city,
+    address.state,
+  ]
+    .filter(Boolean)
+    .join(", ") || "No delivery address provided.";
 }
