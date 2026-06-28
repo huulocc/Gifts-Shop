@@ -56,7 +56,7 @@ export function RegisterPage() {
       <div className="stack">
         <p className="eyebrow">Customer account</p>
         <h1 id="register-title">Create your account</h1>
-        <p className="muted">Registration creates Customer accounts only. Manager accounts are seeded.</p>
+        <p className="muted">Create an account to checkout faster and follow your gift orders.</p>
       </div>
       {formError ? <div className="alert alert-error">{formError}</div> : null}
       <form className="form-grid" onSubmit={handleSubmit} noValidate>
@@ -74,7 +74,7 @@ export function RegisterPage() {
           autoComplete="tel"
           value={values.phoneNumber}
           onChange={(value) => updateField("phoneNumber", value)}
-          helperText="Optional, used only as customer contact information."
+          helperText="Optional. We use it for delivery updates."
         />
         <FormField
           label="Email"

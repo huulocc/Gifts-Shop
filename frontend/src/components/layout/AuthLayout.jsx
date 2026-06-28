@@ -12,7 +12,7 @@ export function AuthLayout() {
           <p className="eyebrow">Thoughtful gifts</p>
           <h1>Shop calm, useful gifts.</h1>
           <p className="lead">
-            Browse a compact catalog, keep cart choices clear, and record payment without external gateways.
+            Browse a compact catalog, keep cart choices clear, and check out with confidence.
           </p>
         </div>
       </section>

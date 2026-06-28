@@ -153,7 +153,7 @@ export function ManagerOrdersPage() {
           label="Search orders"
           value={query}
           onSearch={setQuery}
-          placeholder="Order id or customer email"
+          placeholder="Order id, customer, or recipient"
         />
         <label className="field">
           <span>Status</span>

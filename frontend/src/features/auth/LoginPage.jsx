@@ -50,9 +50,7 @@ export function LoginPage() {
       <div className="stack">
         <p className="eyebrow">Welcome back</p>
         <h1 id="login-title">Log in to GiftShop</h1>
-        <p className="muted">
-          Use a customer or manager account. Managers will go straight to the operations workspace.
-        </p>
+        <p className="muted">Log in to review orders, finish checkout, and manage your account.</p>
       </div>
       {successMessage ? <div className="alert alert-success">{successMessage}</div> : null}
       {formError ? <div className="alert alert-error">{formError}</div> : null}
@@ -79,14 +77,6 @@ export function LoginPage() {
           Log in
         </Button>
       </form>
-      <p className="muted">
-        Customer seed: <span className="mono">customer@giftshop.local</span> /{" "}
-        <span className="mono">Customer@123</span>
-      </p>
-      <p className="muted">
-        Manager seed: <span className="mono">manager@giftshop.local</span> /{" "}
-        <span className="mono">Manager@123</span>
-      </p>
       <p>
         Need a customer account? <Link className="btn btn-tertiary" to="/register">Register</Link>
       </p>

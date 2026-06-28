@@ -2,10 +2,10 @@ import { paymentMethods } from "../../utils/constants.js";
 import { formatStatus } from "../../utils/format.js";
 
 const descriptions = {
-  cash: "Record a cash transaction for this order.",
-  credit_card: "Record credit card as the selected method only.",
-  paypal: "Record PayPal as the selected method only.",
-  bank_transfer: "Record a bank transfer transaction.",
+  cash: "Pay with cash when your order is delivered.",
+  credit_card: "Use your card for this order.",
+  paypal: "Use PayPal for this order.",
+  bank_transfer: "Pay by bank transfer after checkout.",
 };
 
 export function PaymentMethodSelector({ value, onChange, error }) {

@@ -9,7 +9,7 @@ import { DetailSkeleton, ErrorState } from "../../components/common/StateViews.j
 import { useToast } from "../../contexts/ToastContext.jsx";
 import { orderService } from "../../services/orderService.js";
 import { orderStatuses } from "../../utils/constants.js";
-import { formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
+import { formatAddress, formatCurrency, formatDateTime, formatStatus } from "../../utils/format.js";
 import { validateOrderStatusTransition } from "../../utils/validation.js";
 
 export function ManagerOrderDetailPage() {
@@ -94,7 +94,7 @@ export function ManagerOrderDetailPage() {
       </nav>
       <ManagerPageHeader
         title={order.id}
-        description={`Created ${formatDateTime(order.createdAt)}. Managers may inspect order and payment information.`}
+        description={`Created ${formatDateTime(order.createdAt)}. Review customer, delivery, and payment details.`}
         action={<StatusBadge value={order.orderStatus} />}
       />
 
@@ -107,6 +107,15 @@ export function ManagerOrderDetailPage() {
             </p>
             <p className="muted">{order.customer?.email}</p>
             <p className="muted">{order.customer?.phoneNumber || "No phone number"}</p>
+          </section>
+
+          <section className="surface surface-padded stack">
+            <h2>Delivery</h2>
+            <p>
+              Recipient: <strong>{order.recipientName || "Not provided"}</strong>
+            </p>
+            <p className="muted">{order.recipientPhone || "No recipient phone"}</p>
+            <p className="muted">{formatAddress(order.shippingAddress)}</p>
           </section>
 
           <section className="surface surface-padded stack">
@@ -135,11 +144,17 @@ export function ManagerOrderDetailPage() {
             {statusError ? <p className="field-error" role="alert">{statusError}</p> : null}
           </section>
 
-          <DataTable caption="Manager order items" columns={columns} rows={order.items} rowKey={(item) => item.id} />
+          <DataTable caption="Order items" columns={columns} rows={order.items} rowKey={(item) => item.id} />
 
           <section className="surface surface-padded stack">
             <h2>Payment information</h2>
             <p>Selected method: <strong>{formatStatus(order.paymentMethod)}</strong></p>
+            {Number(order.discountAmount || 0) > 0 ? (
+              <p>
+                Voucher: <strong>{order.voucher?.code || "Discount"}</strong>{" "}
+                <span className="muted">saved {formatCurrency(order.discountAmount)}</span>
+              </p>
+            ) : null}
             {order.payments.length ? (
               order.payments.map((payment) => (
                 <div className="between" key={payment.id}>
@@ -151,7 +166,7 @@ export function ManagerOrderDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="muted">No payment records exist for this order.</p>
+              <p className="muted">No payment has been confirmed for this order.</p>
             )}
           </section>
         </div>
@@ -162,11 +177,21 @@ export function ManagerOrderDetailPage() {
             <span>Items</span>
             <strong>{order.items.reduce((sum, item) => sum + item.quantity, 0)}</strong>
           </div>
+          <div className="summary-line">
+            <span>Subtotal</span>
+            <strong>{formatCurrency(order.subtotalAmount)}</strong>
+          </div>
+          {Number(order.discountAmount || 0) > 0 ? (
+            <div className="summary-line">
+              <span>{order.voucher?.code || "Discount"}</span>
+              <strong>-{formatCurrency(order.discountAmount)}</strong>
+            </div>
+          ) : null}
           <div className="summary-line summary-total">
             <span>Total</span>
             <strong>{formatCurrency(order.totalAmount)}</strong>
           </div>
-          <p className="muted">Payment info is read-only for managers in v1.</p>
+          <p className="muted">Payment details update after the customer confirms payment.</p>
         </aside>
       </div>
 

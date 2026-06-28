@@ -80,7 +80,7 @@ export function OrderHistoryPage() {
       <PageHeader
         eyebrow="Orders"
         title="Your order history"
-        description="Review order status, payment method, item snapshots, and totals."
+        description="Review order status, payment method, items, and totals."
       />
       <div className="toolbar">
         <label className="field">

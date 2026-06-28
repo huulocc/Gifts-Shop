@@ -71,26 +71,66 @@ export function normalizeCart(cart) {
   };
 }
 
+export function normalizeAddress(address) {
+  if (!address) return null;
+  return {
+    state: address.state || "",
+    city: address.city || "",
+    street: address.street || "",
+    buildingNumber: address.buildingNumber || "",
+  };
+}
+
+export function normalizeVoucher(voucher) {
+  if (!voucher) return null;
+  return {
+    id: voucher.id || "",
+    code: String(voucher.code || "").trim().toUpperCase(),
+    percentage: normalizeMoney(voucher.percentage),
+  };
+}
+
+export function normalizeVoucherQuote(quote) {
+  if (!quote) return null;
+  return {
+    voucher: normalizeVoucher(quote.voucher),
+    subtotalAmount: normalizeMoney(quote.subtotalAmount),
+    discountAmount: normalizeMoney(quote.discountAmount),
+    totalAmount: normalizeMoney(quote.totalAmount),
+  };
+}
+
 export function normalizeOrder(order) {
   if (!order) return null;
   const items = Array.isArray(order.items) ? order.items : [];
+  const normalizedItems = items.map((item) => ({
+    id: item.id,
+    productId: item.productId,
+    productName: item.productName || item.product?.name || "Product",
+    quantity: Number(item.quantity || 0),
+    unitPrice: normalizeMoney(item.unitPrice),
+    lineTotal: normalizeMoney(
+      item.lineTotal || Number(item.unitPrice || 0) * Number(item.quantity || 0)
+    ),
+  }));
+  const subtotal = normalizedItems.reduce(
+    (sum, item) => sum + Number(item.lineTotal || 0),
+    0
+  );
   return {
     id: order.id,
     customer: normalizeUser(order.customer),
+    recipientName: order.recipientName || "",
+    recipientPhone: order.recipientPhone || "",
+    shippingAddress: normalizeAddress(order.shippingAddress || order.address),
+    voucher: normalizeVoucher(order.voucher),
     giftMessage: order.giftMessage || "",
     orderStatus: toUiEnum(order.orderStatus),
     paymentMethod: toUiEnum(order.paymentMethod),
+    subtotalAmount: normalizeMoney(order.subtotalAmount || subtotal),
+    discountAmount: normalizeMoney(order.discountAmount),
     totalAmount: normalizeMoney(order.totalAmount),
-    items: items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      productName: item.productName || item.product?.name || "Product",
-      quantity: Number(item.quantity || 0),
-      unitPrice: normalizeMoney(item.unitPrice),
-      lineTotal: normalizeMoney(
-        item.lineTotal || Number(item.unitPrice || 0) * Number(item.quantity || 0)
-      ),
-    })),
+    items: normalizedItems,
     payments: Array.isArray(order.payments)
       ? order.payments.map((payment) => normalizePayment(payment))
       : [],

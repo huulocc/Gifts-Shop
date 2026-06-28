@@ -7,6 +7,7 @@ import {
   normalizeProduct,
   normalizeRevenue,
   normalizeUser,
+  normalizeVoucherQuote,
 } from "./normalizers.js";
 
 const STORAGE_KEY = "giftshop.mock.state";
@@ -32,7 +33,12 @@ function loadState() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
     return initial;
   }
-  return JSON.parse(stored);
+  const state = JSON.parse(stored);
+  if (!Array.isArray(state.vouchers)) {
+    state.vouchers = createInitialMockState().vouchers;
+    saveState(state);
+  }
+  return state;
 }
 
 function saveState(state) {
@@ -90,7 +96,8 @@ function requireUser(state, role) {
 function normalizeOrderWithRelations(state, order) {
   const customer = state.users.find((user) => user.id === order.customerId);
   const payments = state.payments.filter((payment) => payment.orderId === order.id);
-  return normalizeOrder({ ...order, customer, payments });
+  const voucher = order.voucher || (state.vouchers || []).find((item) => item.id === order.voucherId);
+  return normalizeOrder({ ...order, customer, payments, voucher });
 }
 
 function filterProducts(state, params = {}) {
@@ -128,6 +135,54 @@ function calculateOrderTotal(items) {
     (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.quantity || 0),
     0
   );
+}
+
+function normalizeVoucherCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function findActiveVoucher(state, voucherCode) {
+  const code = normalizeVoucherCode(voucherCode);
+  return (state.vouchers || []).find((voucher) => voucher.code === code && voucher.isActive);
+}
+
+function calculateDiscountAmount(subtotal, voucher) {
+  return Number((subtotal * (Number(voucher.percentage || 0) / 100)).toFixed(2));
+}
+
+function quoteCartVoucher(state, userId, voucherCode) {
+  const voucher = findActiveVoucher(state, voucherCode);
+  if (!voucher) {
+    error("Voucher code is invalid or inactive.", {
+      status: 400,
+      code: "BAD_REQUEST",
+      fields: { voucherCode: "Enter an active voucher code." },
+    });
+  }
+
+  const cart = state.carts.find((item) => item.userId === userId);
+  if (!cart || cart.items.length === 0) {
+    error("Cart is empty.", { status: 400, code: "EMPTY_CART" });
+  }
+
+  const subtotalAmount = cart.items.reduce((sum, cartItem) => {
+    const product = state.products.find((item) => item.id === cartItem.productId);
+    if (!product || !product.isActive || cartItem.quantity > product.quantity) {
+      error("Stock is no longer available for this quantity.", {
+        status: 409,
+        code: "STOCK_CONFLICT",
+      });
+    }
+    return sum + Number(product.unitPrice || 0) * Number(cartItem.quantity || 0);
+  }, 0);
+  const discountAmount = calculateDiscountAmount(subtotalAmount, voucher);
+
+  return {
+    voucher,
+    subtotalAmount: subtotalAmount.toFixed(2),
+    discountAmount: discountAmount.toFixed(2),
+    totalAmount: (subtotalAmount - discountAmount).toFixed(2),
+  };
 }
 
 const allowedOrderStatusTransitions = {
@@ -451,6 +506,13 @@ export const mockApi = {
     return getCartForUser(state, user.id);
   },
 
+  async applyVoucher(payload) {
+    await delay();
+    const state = loadState();
+    const user = requireUser(state, "customer");
+    return normalizeVoucherQuote(quoteCartVoucher(state, user.id, payload.voucherCode));
+  },
+
   async createOrder(payload) {
     await delay();
     const state = loadState();
@@ -458,6 +520,18 @@ export const mockApi = {
     const cart = state.carts.find((item) => item.userId === user.id);
     if (!cart || cart.items.length === 0) {
       error("Cart is empty.", { status: 400, code: "EMPTY_CART" });
+    }
+    const fields = {};
+    if (!String(payload.recipientName || "").trim()) fields.recipientName = "Recipient name is required.";
+    if (!String(payload.recipientPhone || "").trim()) fields.recipientPhone = "Recipient phone is required.";
+    if (!String(payload.shippingAddress?.state || "").trim()) fields.state = "State is required.";
+    if (!String(payload.shippingAddress?.city || "").trim()) fields.city = "City is required.";
+    if (!String(payload.shippingAddress?.street || "").trim()) fields.street = "Street is required.";
+    if (!String(payload.shippingAddress?.buildingNumber || "").trim()) {
+      fields.buildingNumber = "Building number is required.";
+    }
+    if (Object.keys(fields).length) {
+      error("Invalid order data.", { status: 400, code: "VALIDATION_ERROR", fields });
     }
     const orderItems = cart.items.map((cartItem) => {
       const product = state.products.find((item) => item.id === cartItem.productId);
@@ -476,17 +550,36 @@ export const mockApi = {
         lineTotal: (Number(product.unitPrice) * cartItem.quantity).toFixed(2),
       };
     });
+    const subtotalAmount = calculateOrderTotal(orderItems);
+    let voucher = null;
+    let discountAmount = 0;
+    if (payload.voucherCode) {
+      const quote = quoteCartVoucher(state, user.id, payload.voucherCode);
+      voucher = quote.voucher;
+      discountAmount = Number(quote.discountAmount);
+    }
     orderItems.forEach((item) => {
       const product = state.products.find((entry) => entry.id === item.productId);
       product.quantity = Math.max(0, product.quantity - item.quantity);
     });
-    const totalAmount = calculateOrderTotal(orderItems).toFixed(2);
+    const totalAmount = (subtotalAmount - discountAmount).toFixed(2);
     const order = {
       id: makeId("order"),
       customerId: user.id,
+      recipientName: String(payload.recipientName || "").trim(),
+      recipientPhone: String(payload.recipientPhone || "").trim(),
+      shippingAddress: {
+        state: String(payload.shippingAddress.state || "").trim(),
+        city: String(payload.shippingAddress.city || "").trim(),
+        street: String(payload.shippingAddress.street || "").trim(),
+        buildingNumber: String(payload.shippingAddress.buildingNumber || "").trim(),
+      },
+      voucher,
       giftMessage: String(payload.giftMessage || "").trim(),
-      orderStatus: "placed",
+      orderStatus: "pending",
       paymentMethod: payload.paymentMethod,
+      subtotalAmount: subtotalAmount.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
       totalAmount,
       items: orderItems,
       createdAt: new Date().toISOString(),
@@ -512,7 +605,7 @@ export const mockApi = {
       .filter((order) => {
         if (!query) return true;
         const customer = state.users.find((entry) => entry.id === order.customerId);
-        return `${order.id} ${customer?.fullName || ""} ${customer?.email || ""}`
+        return `${order.id} ${order.recipientName || ""} ${order.recipientPhone || ""} ${customer?.fullName || ""} ${customer?.email || ""}`
           .toLowerCase()
           .includes(query);
       })

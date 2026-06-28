@@ -134,22 +134,63 @@ async function main() {
     },
   });
 
+  await Promise.all([
+    prisma.voucher.upsert({
+      where: { code: 'GIFT10' },
+      update: { percentage: 10, isActive: true },
+      create: { code: 'GIFT10', percentage: 10, isActive: true },
+    }),
+    prisma.voucher.upsert({
+      where: { code: 'THANKYOU15' },
+      update: { percentage: 15, isActive: true },
+      create: { code: 'THANKYOU15', percentage: 15, isActive: true },
+    }),
+    prisma.voucher.upsert({
+      where: { code: 'INACTIVE20' },
+      update: { percentage: 20, isActive: false },
+      create: { code: 'INACTIVE20', percentage: 20, isActive: false },
+    }),
+  ]);
+
   const seededOrder = await prisma.order.upsert({
     where: { id: 'seed-paid-order' },
     update: {
       customerId: customer.id,
+      recipientName: 'Mai Nguyen',
+      recipientPhone: '0912345678',
       giftMessage: 'Happy birthday!',
       orderStatus: OrderStatus.PAID,
       paymentMethod: PaymentMethod.CASH,
+      discountAmount: 0,
       totalAmount: 34.5,
     },
     create: {
       id: 'seed-paid-order',
       customerId: customer.id,
+      recipientName: 'Mai Nguyen',
+      recipientPhone: '0912345678',
       giftMessage: 'Happy birthday!',
       orderStatus: OrderStatus.PAID,
       paymentMethod: PaymentMethod.CASH,
+      discountAmount: 0,
       totalAmount: 34.5,
+    },
+  });
+
+  await prisma.address.upsert({
+    where: { orderId: seededOrder.id },
+    update: {
+      state: 'Ho Chi Minh',
+      city: 'Thu Duc',
+      street: 'Vo Van Ngan',
+      buildingNumber: '12A',
+    },
+    create: {
+      orderId: seededOrder.id,
+      state: 'Ho Chi Minh',
+      city: 'Thu Duc',
+      street: 'Vo Van Ngan',
+      buildingNumber: '12A',
     },
   });
 

@@ -7,17 +7,17 @@ export function ForbiddenPage() {
   return (
     <section className="not-found">
       <div className="state-panel" style={{ maxWidth: 560 }}>
-        <p className="eyebrow">Forbidden</p>
-        <h1>That route is not available for this role.</h1>
+        <p className="eyebrow">Access denied</p>
+        <h1>This page is not available for your account.</h1>
         <p className="muted">
-          GiftShop has only Customer and Manager actors. Customer accounts cannot open manager tools, and managers do not use cart or checkout flows.
+          Return to the right area for your account, or log out and switch accounts.
         </p>
         <div className="cluster">
           <Button to={role ? landingPath : "/products"}>
-            Go to your workspace
+            Go to your home
           </Button>
           <Button variant="secondary" onClick={logout}>
-            Logout
+            Log out
           </Button>
         </div>
       </div>

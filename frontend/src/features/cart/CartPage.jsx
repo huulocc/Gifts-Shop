@@ -78,7 +78,7 @@ export function CartPage() {
       <PageHeader
         eyebrow="Cart"
         title="Review your gifts"
-        description="Quantities are checked against current stock before checkout."
+        description="Adjust quantities, remove items, and continue when your cart looks right."
       />
 
       {loading ? (
@@ -89,7 +89,7 @@ export function CartPage() {
       ) : cart.items.length === 0 ? (
         <EmptyState
           title="Your cart is empty"
-          description="Browse active products and add a gift before checkout."
+          description="Browse products and add a gift before checkout."
           actionLabel="Browse products"
           actionTo="/products"
         />
@@ -116,7 +116,7 @@ export function CartPage() {
                       <p className="muted">{item.product.category?.name}</p>
                     </div>
                     <p className="muted">
-                      {formatCurrency(item.product.unitPrice)} each, {item.product.quantity} in stock.
+                      {formatCurrency(item.product.unitPrice)} each, {item.product.quantity} available.
                     </p>
                     {stockState === "out_of_stock" ? (
                       <p className="field-error" role="alert">
@@ -158,13 +158,13 @@ export function CartPage() {
               actionLabel="Continue to checkout"
               actionTo="/checkout"
               disabled={!cart.items.length}
-              note="Checkout will recheck stock before creating the order."
+              note="We will confirm availability before checkout."
             />
           </div>
           <ConfirmDialog
             open={clearDialogOpen}
             title="Clear your cart?"
-            description="All items will be removed and their quantities returned to stock."
+            description="All items will be removed from your cart."
             confirmLabel="Clear cart"
             danger
             loading={clearing}

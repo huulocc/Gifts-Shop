@@ -106,11 +106,26 @@ export function validateCategory(values) {
 
 export function validateCheckout(values) {
   const errors = {};
+  const recipientNameError = required(values.recipientName, "Recipient name");
+  if (recipientNameError) errors.recipientName = recipientNameError;
+  const recipientPhoneError = required(values.recipientPhone, "Recipient phone");
+  if (recipientPhoneError) errors.recipientPhone = recipientPhoneError;
+  const stateError = required(values.state, "State");
+  if (stateError) errors.state = stateError;
+  const cityError = required(values.city, "City");
+  if (cityError) errors.city = cityError;
+  const streetError = required(values.street, "Street");
+  if (streetError) errors.street = streetError;
+  const buildingNumberError = required(values.buildingNumber, "Building number");
+  if (buildingNumberError) errors.buildingNumber = buildingNumberError;
   if (!paymentMethods.includes(values.paymentMethod)) {
     errors.paymentMethod = "Choose a payment method.";
   }
   if (values.giftMessage && values.giftMessage.length > 240) {
     errors.giftMessage = "Gift message must be 240 characters or fewer.";
+  }
+  if (values.voucherCode && values.voucherCode.length > 50) {
+    errors.voucherCode = "Voucher code must be 50 characters or fewer.";
   }
   return errors;
 }

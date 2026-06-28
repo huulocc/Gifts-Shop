@@ -85,7 +85,7 @@ export function ManagerDashboardPage() {
           <article className="stat-card">
             <span className="muted">Active products</span>
             <strong className="stat-value">{activeCount}</strong>
-            <p className="muted">{inactiveCount} inactive records remain manageable.</p>
+            <p className="muted">{inactiveCount} inactive catalog items remain manageable.</p>
           </article>
           <article className="stat-card">
             <span className="muted">Low stock</span>

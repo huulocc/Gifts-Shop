@@ -99,7 +99,7 @@ export function RevenuePage() {
           ) : (
             <EmptyState
               title="No paid or completed orders yet"
-              description="Record customer payments or complete orders before revenue appears."
+              description="Confirm customer payments or complete orders before revenue appears."
               actionLabel="Review orders"
               actionTo="/manager/orders"
             />

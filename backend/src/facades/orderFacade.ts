@@ -2,13 +2,24 @@ import { Prisma } from '@prisma/client';
 import type { CartRepository } from '../repositories/cartRepository';
 import type { OrderRepository, PendingOrderItem } from '../repositories/orderRepository';
 import type { ProductRepository } from '../repositories/productRepository';
+import type { VoucherRepository } from '../repositories/voucherRepository';
 import type { PaymentService } from '../services/paymentService';
+import { calculateDiscountAmount, isValidVoucherPercentage, normalizeVoucherCode } from '../services/voucherService';
 import type { OrderDto, OrderStatusDto, PaymentMethodDto } from '../types/domain';
-import { ApiError, conflict, forbidden } from '../utils/apiError';
+import { ApiError, badRequest, conflict, forbidden } from '../utils/apiError';
 
 export interface CreateOrderRequest {
+  recipientName: string;
+  recipientPhone: string;
   giftMessage?: string | null;
   paymentMethod: PaymentMethodDto;
+  voucherCode?: string | null;
+  shippingAddress: {
+    state: string;
+    city: string;
+    street: string;
+    buildingNumber: string;
+  };
 }
 
 export interface OrderFacade {
@@ -23,6 +34,7 @@ export class DefaultOrderFacade implements OrderFacade {
     private readonly productRepository: ProductRepository,
     private readonly orderRepository: OrderRepository,
     private readonly paymentService: PaymentService,
+    private readonly voucherRepository: VoucherRepository,
   ) {}
 
   async createOrder(customerId: string, request: CreateOrderRequest): Promise<OrderDto> {
@@ -59,10 +71,39 @@ export class DefaultOrderFacade implements OrderFacade {
       };
     });
 
+    let discountAmount = new Prisma.Decimal(0);
+    let voucherId: string | null = null;
+    const voucherCode = normalizeVoucherCode(request.voucherCode);
+    if (voucherCode) {
+      const voucher = await this.voucherRepository.findActiveByCode(voucherCode);
+      if (!voucher || !isValidVoucherPercentage(voucher.percentage)) {
+        throw badRequest('Voucher code is invalid or inactive.', {
+          voucherCode: 'Enter an active voucher code.',
+        });
+      }
+      voucherId = voucher.id;
+      discountAmount = calculateDiscountAmount(totalAmount, voucher.percentage);
+      if (discountAmount.gt(totalAmount)) {
+        throw badRequest('Voucher discount cannot exceed the order subtotal.', {
+          voucherCode: 'Choose a valid voucher.',
+        });
+      }
+    }
+
     return this.orderRepository.createPendingOrder(customerId, {
+      recipientName: request.recipientName.trim(),
+      recipientPhone: request.recipientPhone.trim(),
+      shippingAddress: {
+        state: request.shippingAddress.state.trim(),
+        city: request.shippingAddress.city.trim(),
+        street: request.shippingAddress.street.trim(),
+        buildingNumber: request.shippingAddress.buildingNumber.trim(),
+      },
+      voucherId,
       giftMessage: request.giftMessage?.trim() || null,
       paymentMethod: request.paymentMethod,
-      totalAmount,
+      discountAmount,
+      totalAmount: totalAmount.minus(discountAmount),
       items: orderItems,
     });
   }
